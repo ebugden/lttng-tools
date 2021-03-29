@@ -80,6 +80,7 @@ DECL_COMMAND(clear);
 DECL_COMMAND(add_trigger);
 DECL_COMMAND(list_triggers);
 DECL_COMMAND(remove_trigger);
+DECL_COMMAND(listen);
 
 extern int cmd_help(int argc, const char **argv, const struct cmd_struct commands[]);
 

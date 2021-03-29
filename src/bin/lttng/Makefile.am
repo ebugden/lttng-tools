@@ -22,6 +22,7 @@ lttng_SOURCES = command.hpp conf.cpp conf.hpp commands/start.cpp \
 				commands/snapshot.cpp \
 				commands/save.cpp \
 				commands/load.cpp \
+				commands/listen.cpp \
 				commands/track-untrack.cpp \
 				commands/status.cpp \
 				commands/metadata.cpp \
