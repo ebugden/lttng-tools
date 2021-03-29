@@ -113,6 +113,7 @@ struct cmd_struct commands[] = {
 	{ "help", nullptr },
 	{ "list", cmd_list },
 	{ "list-triggers", cmd_list_triggers },
+	{ "listen", cmd_listen },
 	{ "load", cmd_load },
 	{ "metadata", cmd_metadata },
 	{ "reclaim-memory", cmd_reclaim_memory },
