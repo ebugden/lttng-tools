@@ -1,0 +1,668 @@
+#!/bin/bash
+#
+# Copyright (C) 2023 Erica Bugden <ebugden@efficios.com>
+#
+# SPDX-License-Identifier: GPL-2.0-only
+
+TEST_DESC="Listen (for trigger notifications)"
+
+CURDIR=$(dirname "$0")/
+TESTDIR=$CURDIR/../../..
+
+# The following line is a shellcheck directive that tells it where to
+# find a sourced file. The directive takes the form of a comment.
+# shellcheck source=../../../utils/utils.sh
+
+source "$TESTDIR/utils/utils.sh"
+LTTNG=$TESTDIR/../src/bin/lttng/$LTTNG_BIN
+TESTAPP_PATH="$TESTDIR/utils/testapp"
+GEN_UST_EVENTS_TESTAPP_NAME="gen-ust-events"
+GEN_UST_EVENTS_TESTAPP_BIN="$TESTAPP_PATH/$GEN_UST_EVENTS_TESTAPP_NAME/$GEN_UST_EVENTS_TESTAPP_NAME"
+NUM_TESTS=27
+NR_ITER=1
+
+# TODO: Chuck into utils.sh instead?
+function wait_until_n_lines_in_file {
+	local file_path=$1
+	local expected_line_count=$2
+
+	while [ "$(wc --lines < "$file_path")" -lt "$expected_line_count" ]
+	do
+		sleep 0.1
+	done
+}
+
+# Flag to indicate whether the LTTng listen application is ready to
+# receive trigger notifications.
+# Intended scope: Signal handler and listen launch functions.
+LISTEN_IS_READY=0
+
+function handle_sigusr1() {
+	diag "The LTTng listen application is ready."
+	LISTEN_IS_READY=1
+}
+
+# LTTng listen application will emit SIGUSR1 when it is ready to receive
+# trigger notifications.
+trap handle_sigusr1 SIGUSR1
+
+# Run lttng listen and wait for it to be ready.
+#
+# The first argument is the path that stdout and stderr are both
+# redirected to. The rest of the arguments are forwarded to lttng
+# listen.
+function launch_lttng_listen {
+	local output_dest="$1"
+	shift 1
+
+	LISTEN_IS_READY=0
+
+	diag "$LTTNG listen $*"
+	# Launch listen in the background because otherwise it will block
+	# the test script.
+	#
+	# TODO: Fix listen command to make it not buffer output
+	# Explicitly running the listen command with no buffering is
+	# currently required for this test to pass as expected.
+	#
+	# TODO: When buffering is fixed, adapt to use _run_lttng_cmd. This
+	# makes it less likely for folks to forget to call the built binary
+	# instead of their locally installed version of lttng.
+	# e.g. _run_lttng_cmd "$output_dest" "$error_dest" listen "$@" &
+	local unbuffered=0
+	stdbuf --input=$unbuffered --output=$unbuffered --error=$unbuffered \
+		"$LTTNG" listen "$@" &>"$output_dest" &
+
+	local lttng_listen_pid=$!
+
+	# Wait for listen to either send SIGUSR1 or exit
+	while kill -0 $lttng_listen_pid 2>/dev/null; do
+		if [ $LISTEN_IS_READY -eq 1 ]; then
+			diag "Proceed with test since the LTTng listen application is ready."
+			break
+		fi
+		sleep 1 # Check every second
+	done
+
+	# Check if loop exited because application exited before becoming
+	# ready
+	if [ $LISTEN_IS_READY -ne 1 ]; then
+		diag "The LTTng listen application has exited before signaling readiness."
+		return 1
+	fi
+}
+
+# Call lttng listen with no arguments
+function test_listen_all_triggers {
+	local test_desc="Implicitly listen for all trigger notifications (No arguments)"
+	local trigger_name="trigger1"
+	local actual_output=$(mktemp --tmpdir test-listen-cli-actual-output.XXXXXX)
+
+	diag "$test_desc"
+
+	lttng_add_trigger_ok \
+		$trigger_name \
+		--condition event-rule-matches --type user --name tp:tptest \
+		--action notify
+
+	# Launch lttng listen
+	launch_lttng_listen "$actual_output"
+
+	if [ $? -eq 1 ]; then
+		diag "The LTTng listen application failed to launch. Abort test case."
+		diag "LTTng listen output:"
+		diag "$(cat "$actual_output")"
+		fail "$test_desc"
+	else
+		# The following line gets the correct pid as long as the function
+		# launching listen doesn't launch any other tasks in the background.
+		local lttng_listen_pid=$!
+
+		# Artificially produce the desired event-rule condition
+		$GEN_UST_EVENTS_TESTAPP_BIN --iter $NR_ITER
+
+		# Define expected output
+		local expected_output=$(mktemp --tmpdir test-listen-cli-expected-output.XXXXXX)
+
+		# The '-' in `<<-` means that the leading tabs in the following
+		# "Here document" are ignored.
+		cat > "$expected_output" <<- EOF
+		Warning: Listening for notifications from all existing triggers.
+		Event (trigger trigger1)
+		EOF
+
+		# Wait for the trigger notifications to be received
+		local expected_output_n_lines=$(wc --lines < "$expected_output")
+		diag "Wait until the output has the expected number of lines."
+		wait_until_n_lines_in_file "$actual_output" "$expected_output_n_lines"
+
+		# Send the SIGTERM signal
+		kill $lttng_listen_pid
+
+		# Wait for the process to exit
+		wait $lttng_listen_pid
+
+		# Check expected output
+		#
+		# Redirect stdout to stderr (1>&2) so that the test output (stdout)
+		# remains a valid TAP stream even if the files are not identical.
+		#
+		# If the files are identical, no output will be generated. If they
+		# are different, the diff will show.
+		diff --unified "$expected_output" "$actual_output" 1>&2
+
+		# diff returns 0 if the contents are identical and 1 if they differ.
+		ok $? "$test_desc"
+
+		# Tear down
+		rm "$expected_output"
+	fi
+
+	# Tear down
+	lttng_remove_trigger_ok $trigger_name
+
+	rm "$actual_output"
+
+	echo # Empty line for readability
+}
+
+function test_listen_one_trigger {
+	local test_desc="Listen for one trigger notification"
+	local trigger_name="trigger1"
+	local actual_output=$(mktemp --tmpdir test-listen-cli-actual-output.XXXXXX)
+
+	diag "$test_desc"
+
+	lttng_add_trigger_ok \
+		$trigger_name \
+		--condition event-rule-matches --type user --name tp:tptest \
+		--action notify
+
+	# Launch lttng listen
+	launch_lttng_listen "$actual_output" "$trigger_name"
+
+	if [ $? -eq 1 ]; then
+		diag "The LTTng listen application failed to launch. Abort test case."
+		diag "LTTng listen output:"
+		diag "$(cat "$actual_output")"
+		fail "$test_desc"
+	else
+		# The following line gets the correct pid as long as the function
+		# launching listen doesn't launch any other tasks in the background.
+		local lttng_listen_pid=$!
+
+		# Artificially produce the desired event-rule condition
+		$GEN_UST_EVENTS_TESTAPP_BIN --iter $NR_ITER
+
+		# Define expected output
+		local expected_output=$(mktemp --tmpdir test-listen-cli-expected-output.XXXXXX)
+
+		# The '-' in `<<-` means that the leading tabs in the following
+		# "Here document" are ignored.
+		cat > "$expected_output" <<- EOF
+		Warning: Listening on the specified triggers.
+		Event (trigger trigger1)
+		EOF
+
+		# Wait for the trigger notifications to be received
+		local expected_output_n_lines=$(wc --lines < "$expected_output")
+		diag "Wait until the output has the expected number of lines."
+		wait_until_n_lines_in_file "$actual_output" "$expected_output_n_lines"
+
+		# Send the SIGTERM signal
+		kill $lttng_listen_pid
+
+		# Wait for the process to exit
+		wait $lttng_listen_pid
+
+		# Check expected output
+		#
+		# Redirect stdout to stderr (1>&2) so that the test output (stdout)
+		# remains a valid TAP stream even if the files are not identical.
+		#
+		# If the files are identical, no output will be generated. If they
+		# are different, the diff will show.
+		diff --unified "$expected_output" "$actual_output" 1>&2
+
+		# diff returns 0 if the contents are identical and 1 if they differ.
+		ok $? "$test_desc"
+
+		# Tear down
+		rm "$expected_output"
+	fi
+
+	# Tear down
+	lttng_remove_trigger_ok $trigger_name
+
+	rm "$actual_output"
+
+	echo # Empty line for readability
+}
+
+function test_listen_two_triggers {
+	local test_desc="Listen for notifications from two different triggers"
+	local trigger1_name="trigger1"
+	local trigger2_name="trigger2"
+	local actual_output=$(mktemp --tmpdir test-listen-cli-actual-output.XXXXXX)
+
+	diag "$test_desc"
+
+	lttng_add_trigger_ok \
+		$trigger1_name \
+		--condition event-rule-matches --type user --name tp:tptest \
+		--action notify
+	lttng_add_trigger_ok \
+		$trigger2_name \
+		--condition event-rule-matches --type user --name tp:end \
+		--action notify
+
+	# Launch lttng listen
+	launch_lttng_listen "$actual_output" "$trigger1_name" "$trigger2_name"
+
+	if [ $? -eq 1 ]; then
+		diag "The LTTng listen application failed to launch. Abort test case."
+		diag "LTTng listen output:"
+		diag "$(cat "$actual_output")"
+		fail "$test_desc"
+	else
+		# The following line gets the correct pid as long as the function
+		# launching listen doesn't launch any other tasks in the background.
+		local lttng_listen_pid=$!
+
+		# Artificially produce the desired event-rule condition
+		$GEN_UST_EVENTS_TESTAPP_BIN --iter $NR_ITER --emit-end-event
+
+		# Define expected output
+		local expected_output=$(mktemp --tmpdir test-listen-cli-expected-output.XXXXXX)
+
+		# The '-' in `<<-` means that the leading tabs in the following
+		# "Here document" are ignored.
+		cat > "$expected_output" <<- EOF
+		Warning: Listening on the specified triggers.
+		Event (trigger trigger1)
+		Event (trigger trigger2)
+		EOF
+
+		# Wait for the trigger notifications to be received
+		local expected_output_n_lines=$(wc --lines < "$expected_output")
+		diag "Wait until the output has the expected number of lines."
+		wait_until_n_lines_in_file "$actual_output" "$expected_output_n_lines"
+
+		# Send the SIGTERM signal
+		kill $lttng_listen_pid
+
+		# Wait for the process to exit
+		wait $lttng_listen_pid
+
+		# Check expected output
+		#
+		# Redirect stdout to stderr (1>&2) so that the test output (stdout)
+		# remains a valid TAP stream even if the files are not identical.
+		#
+		# If the files are identical, no output will be generated. If they
+		# are different, the diff will show.
+		diff --unified "$expected_output" "$actual_output" 1>&2
+
+		# diff returns 0 if the contents are identical and 1 if they differ.
+		ok $? "$test_desc"
+
+		# Tear down
+		rm "$expected_output"
+	fi
+
+	# Tear down
+	lttng_remove_trigger_ok $trigger1_name
+	lttng_remove_trigger_ok $trigger2_name
+
+	rm "$actual_output"
+
+	echo # Empty line for readability
+}
+
+# TODO: Adjust the following test case. At the moment, it is expected
+# that creating two triggers that listen to the same event rule fails.
+# So, the expected output is wrong. Title doesn't really indicate the
+# expected output either.
+#
+# TODO: There's a contradiction between being able to create two
+# triggers matching the same event rule, but not being able to listen
+# to both. Maybe it just shouldn't fail.
+# i.e. Create a task in the sessiond for allowing subscribing by trigger
+# and not by notification (this would allow subscribing to triggers that
+# are identical except in name).
+#
+# TODO: If we fail to subscribe to one of the triggers, do we want to
+# still listen on the ones that we succeeded to subscribe to? I think so.
+function test_listen_two_triggers_same_event_rule {
+	local test_desc="Listen for notifications from two triggers that \
+match the same event rule"
+	local trigger1_name="trigger1"
+	local trigger2_name="trigger2"
+	local actual_output=$(mktemp --tmpdir test-listen-cli-actual-output.XXXXXX)
+
+	diag "$test_desc"
+
+	lttng_add_trigger_ok \
+		$trigger1_name \
+		--condition event-rule-matches --type user --name tp:tptest \
+		--action notify
+	lttng_add_trigger_ok \
+		$trigger2_name \
+		--condition event-rule-matches --type user --name tp:tptest \
+		--action notify
+
+	# Launch lttng listen
+	launch_lttng_listen "$actual_output" "$trigger1_name" "$trigger2_name"
+
+	if [ $? -eq 1 ]; then
+		diag "The LTTng listen application failed to launch. Abort test case."
+		diag "LTTng listen output:"
+		diag "$(cat "$actual_output")"
+		fail "$test_desc"
+	else
+		# The following line gets the correct pid as long as the function
+		# launching listen doesn't launch any other tasks in the background.
+		local lttng_listen_pid=$!
+
+		# Artificially produce the desired event-rule condition
+		$GEN_UST_EVENTS_TESTAPP_BIN --iter $NR_ITER
+
+		# Define expected output
+		local expected_output=$(mktemp --tmpdir test-listen-cli-expected-output.XXXXXX)
+
+		# The '-' in `<<-` means that the leading tabs in the following
+		# "Here document" are ignored.
+		cat > "$expected_output" <<- EOF
+		Warning: Listening on the specified triggers.
+		Event (trigger trigger1)
+		Event (trigger trigger2)
+		EOF
+
+		# Wait for the trigger notifications to be received
+		local expected_output_n_lines=$(wc --lines < "$expected_output")
+		diag "Wait until the output has the expected number of lines."
+		wait_until_n_lines_in_file "$actual_output" "$expected_output_n_lines"
+
+		# Send the SIGTERM signal
+		kill $lttng_listen_pid
+
+		# Wait for the process to exit
+		wait $lttng_listen_pid
+
+		# Check expected output
+		#
+		# Redirect stdout to stderr (1>&2) so that the test output (stdout)
+		# remains a valid TAP stream even if the files are not identical.
+		#
+		# If the files are identical, no output will be generated. If they
+		# are different, the diff will show.
+		diff --unified "$expected_output" "$actual_output" 1>&2
+
+		# diff returns 0 if the contents are identical and 1 if they differ.
+		ok $? "$test_desc"
+
+		# Tear down
+		rm "$expected_output"
+	fi
+
+	# Tear down
+	lttng_remove_trigger_ok $trigger1_name
+	lttng_remove_trigger_ok $trigger2_name
+
+	rm "$actual_output"
+
+	echo # Empty line for readability
+}
+
+function test_listen_two_triggers_implicitly {
+	local test_desc="Listen for notifications from two different triggers (implicitly)"
+	local trigger1_name="trigger1"
+	local trigger2_name="trigger2"
+	local actual_output=$(mktemp --tmpdir test-listen-cli-actual-output.XXXXXX)
+
+	diag "$test_desc"
+
+	lttng_add_trigger_ok \
+		$trigger1_name \
+		--condition event-rule-matches --type user --name tp:tptest \
+		--action notify
+	lttng_add_trigger_ok \
+		$trigger2_name \
+		--condition event-rule-matches --type user --name tp:end \
+		--action notify
+
+	# Launch lttng listen
+	launch_lttng_listen "$actual_output"
+
+	if [ $? -eq 1 ]; then
+		diag "The LTTng listen application failed to launch. Abort test case."
+		diag "LTTng listen output:"
+		diag "$(cat "$actual_output")"
+		fail "$test_desc"
+	else
+		# The following line gets the correct pid as long as the function
+		# launching listen doesn't launch any other tasks in the background.
+		local lttng_listen_pid=$!
+
+		# Artificially produce the desired event-rule condition
+		$GEN_UST_EVENTS_TESTAPP_BIN --iter $NR_ITER --emit-end-event
+
+		# Define expected output
+		local expected_output=$(mktemp --tmpdir test-listen-cli-expected-output.XXXXXX)
+
+		# The '-' in `<<-` means that the leading tabs in the following
+		# "Here document" are ignored.
+		cat > "$expected_output" <<- EOF
+		Warning: Listening for notifications from all existing triggers.
+		Event (trigger trigger1)
+		Event (trigger trigger2)
+		EOF
+
+		# Wait for the trigger notifications to be received
+		local expected_output_n_lines=$(wc --lines < "$expected_output")
+		diag "Wait until the output has the expected number of lines."
+		wait_until_n_lines_in_file "$actual_output" "$expected_output_n_lines"
+
+		# Send the SIGTERM signal
+		kill $lttng_listen_pid
+
+		# Wait for the process to exit
+		wait $lttng_listen_pid
+
+		# Check expected output
+		#
+		# Redirect stdout to stderr (1>&2) so that the test output (stdout)
+		# remains a valid TAP stream even if the files are not identical.
+		#
+		# If the files are identical, no output will be generated. If they
+		# are different, the diff will show.
+		diff --unified "$expected_output" "$actual_output" 1>&2
+
+		# diff returns 0 if the contents are identical and 1 if they differ.
+		ok $? "$test_desc"
+
+		# Tear down
+		rm "$expected_output"
+	fi
+
+	# Tear down
+	lttng_remove_trigger_ok $trigger1_name
+	lttng_remove_trigger_ok $trigger2_name
+
+	rm "$actual_output"
+
+	echo # Empty line for readability
+}
+
+function test_listen_with_event_fields {
+	local test_desc="Listen for one trigger notification with captured event field values"
+	local trigger_name="trigger1"
+	local actual_output=$(mktemp --tmpdir test-listen-cli-actual-output.XXXXXX)
+
+	diag "$test_desc"
+
+	lttng_add_trigger_ok \
+		$trigger_name \
+		--condition event-rule-matches --type user --name tp:tptest \
+		--capture 'intfield' --capture 'doublefield' --action notify
+
+	# Launch lttng listen
+	launch_lttng_listen "$actual_output" "$trigger_name"
+
+	if [ $? -eq 1 ]; then
+		diag "The LTTng listen application failed to launch. Abort test case."
+		diag "LTTng listen output:"
+		diag "$(cat "$actual_output")"
+		fail "$test_desc"
+	else
+		# The following line gets the correct pid as long as the function
+		# launching listen doesn't launch any other tasks in the background.
+		local lttng_listen_pid=$!
+
+		# Artificially produce the desired event-rule condition
+		$GEN_UST_EVENTS_TESTAPP_BIN --iter $NR_ITER
+
+		# Define expected output
+		local expected_output=$(mktemp --tmpdir test-listen-cli-expected-output.XXXXXX)
+
+		# The '-' in `<<-` means that the leading tabs in the following
+		# "Here document" are ignored.
+		cat > "$expected_output" <<- EOF
+		Warning: Listening on the specified triggers.
+		Event (trigger trigger1)
+		[
+		intfield: 0
+		doublefield: 2
+		]
+		EOF
+
+		# Wait for the trigger notifications to be received
+		local expected_output_n_lines=$(wc --lines < "$expected_output")
+		diag "Wait until the output has the expected number of lines."
+		wait_until_n_lines_in_file "$actual_output" "$expected_output_n_lines"
+
+		# Send the SIGTERM signal
+		kill $lttng_listen_pid
+
+		# Wait for the process to exit
+		wait $lttng_listen_pid
+
+		# Check expected output
+		#
+		# Redirect stdout to stderr (1>&2) so that the test output (stdout)
+		# remains a valid TAP stream even if the files are not identical.
+		#
+		# If the files are identical, no output will be generated. If they
+		# are different, the diff will show.
+		diff --unified "$expected_output" "$actual_output" 1>&2
+
+		# diff returns 0 if the contents are identical and 1 if they differ.
+		ok $? "$test_desc"
+
+		# Tear down
+		rm "$expected_output"
+	fi
+
+	# Tear down
+	lttng_remove_trigger_ok $trigger_name
+
+	rm "$actual_output"
+
+	echo # Empty line for readability
+}
+
+function test_listen_without_notify_action {
+	local test_desc="Listen to a trigger with no notify action"
+	local trigger_name="trigger1"
+	local actual_output=$(mktemp --tmpdir test-listen-cli-actual-output.XXXXXX)
+
+	diag "$test_desc"
+
+	local session_name="my-session"
+	"$LTTNG" create "$session_name" --snapshot --output /tmp/demo-output
+
+	lttng_add_trigger_ok \
+		$trigger_name \
+		--condition event-rule-matches --type user --name tp:tptest \
+		--action stop-session "$session_name"
+
+	# Launch lttng listen
+	launch_lttng_listen "$actual_output" "$trigger_name"
+
+	if [ $? -eq 1 ]; then
+		diag "The LTTng listen application failed to launch. Abort test case."
+		diag "LTTng listen output:"
+		diag "$(cat "$actual_output")"
+		fail "$test_desc"
+	else
+		# The following line gets the correct pid as long as the function
+		# launching listen doesn't launch any other tasks in the background.
+		local lttng_listen_pid=$!
+
+		# Artificially produce the desired event-rule condition
+		$GEN_UST_EVENTS_TESTAPP_BIN --iter $NR_ITER
+
+		# Define expected output
+		local expected_output=$(mktemp --tmpdir test-listen-cli-expected-output.XXXXXX)
+
+		# The '-' in `<<-` means that the leading tabs in the following
+		# "Here document" are ignored.
+		cat > "$expected_output" <<- EOF
+		Warning: Subscribing to trigger \`trigger1\`, but it does not contain a notify action.
+		Warning: Listening on the specified triggers.
+		EOF
+
+		# Wait for the trigger notifications to be received
+		local expected_output_n_lines=$(wc --lines < "$expected_output")
+		diag "Wait until the output has the expected number of lines."
+		wait_until_n_lines_in_file "$actual_output" "$expected_output_n_lines"
+
+		# Send the SIGTERM signal
+		kill $lttng_listen_pid
+
+		# Wait for the process to exit
+		wait $lttng_listen_pid
+
+		# Check expected output
+		#
+		# Redirect stdout to stderr (1>&2) so that the test output (stdout)
+		# remains a valid TAP stream even if the files are not identical.
+		#
+		# If the files are identical, no output will be generated. If they
+		# are different, the diff will show.
+		diff --unified "$expected_output" "$actual_output" 1>&2
+
+		# diff returns 0 if the contents are identical and 1 if they differ.
+		ok $? "$test_desc"
+
+		# Tear down
+		rm "$expected_output"
+	fi
+
+	# Tear down
+	lttng_remove_trigger_ok $trigger_name
+	"$LTTNG" destroy "$session_name"
+
+	rm "$actual_output"
+
+	echo # Empty line for readability
+}
+
+# MUST set TESTDIR before calling the following functions
+plan_tests $NUM_TESTS
+
+print_test_banner "$TEST_DESC"
+
+start_lttng_sessiond_notap
+
+echo # Empty line for readability
+
+test_listen_all_triggers
+test_listen_one_trigger
+test_listen_two_triggers
+test_listen_two_triggers_same_event_rule
+test_listen_two_triggers_implicitly
+test_listen_with_event_fields
+test_listen_without_notify_action
+
+stop_lttng_sessiond_notap

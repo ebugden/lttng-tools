@@ -9,6 +9,7 @@ SUBDIRS = base-path \
 	exclusion \
 	filtering \
 	health \
+	listen \
 	live \
 	metadata \
 	mi \
