@@ -1306,6 +1306,7 @@ AC_CONFIG_FILES([
 	tests/regression/tools/tracefile-limits/Makefile
 	tests/regression/tools/snapshots/Makefile
 	tests/regression/tools/lttng-ctl/Makefile
+	tests/regression/tools/listen/Makefile
 	tests/regression/tools/live/Makefile
 	tests/regression/tools/exclusion/Makefile
 	tests/regression/tools/save-load/Makefile

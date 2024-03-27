@@ -10,6 +10,7 @@ SUBDIRS = base-path \
 	exclusion \
 	filtering \
 	health \
+	listen \
 	live \
 	lttng-ctl \
 	metadata \

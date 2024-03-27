@@ -22,6 +22,7 @@ SERIAL_TESTS = tools/base-path/test_ust \
 	tools/health/test_thread_ok \
 	tools/health/test_thread_stall \
 	tools/health/test_tp_fail \
+	tools/listen/test_listen_cli \
 	tools/live/test_kernel \
 	tools/live/test_lttng_kernel \
 	tools/live/test_ust \
