@@ -23,7 +23,8 @@ noinst_HEADERS = \
 noinst_LTLIBRARIES += libargpar.la
 libargpar_la_SOURCES = \
 	argpar/argpar.c \
-	argpar/argpar.h
+	argpar/argpar.h \
+	argpar/argpar.hpp
 
 
 # libargpar-utils
