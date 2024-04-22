@@ -310,6 +310,8 @@ public:
         case ARGPAR_ITER_NEXT_STATUS_ERROR_MEMORY:
             throw std::bad_alloc {};
         }
+
+        std::abort();
     }
 
     unsigned int ingestedOrigArgs() const noexcept
