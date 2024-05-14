@@ -17,12 +17,30 @@
 
 #define LTTNG_THROW_CLI_NO_DEFAULT_SESSION() \
 	throw lttng::cli::no_default_session_error(LTTNG_SOURCE_LOCATION())
+#define LTTNG_THROW_CLI_UNEXPECTED_TYPE(object_name, type) \
+	throw lttng::cli::unexpected_type(object_name, type, LTTNG_SOURCE_LOCATION())
+#define LTTNG_THROW_CLI_TRIGGER_NOTIFICATION_SUBSCRIPTION_ERROR(trigger_name)   \
+	throw lttng::cli::trigger_notification_subscription_error(trigger_name, \
+								  LTTNG_SOURCE_LOCATION())
 
 namespace lttng {
 namespace cli {
 class no_default_session_error : public runtime_error {
 public:
 	explicit no_default_session_error(const lttng::source_location& source_location);
+};
+
+class unexpected_type : public runtime_error {
+public:
+	explicit unexpected_type(const char *object_name,
+				 int type,
+				 const lttng::source_location& source_location);
+};
+
+class trigger_notification_subscription_error : public runtime_error {
+public:
+	explicit trigger_notification_subscription_error(
+		const char *trigger_name, const lttng::source_location& source_location);
 };
 } /* namespace cli */
 }; /* namespace lttng */
