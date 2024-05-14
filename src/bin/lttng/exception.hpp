@@ -26,6 +26,23 @@ public:
 					  const char *function_name,
 					  unsigned int line_number);
 };
+
+class unexpected_type : public runtime_error {
+public:
+	explicit unexpected_type(const char *object_name,
+					  int type,
+					  const char *file_name,
+					  const char *function_name,
+					  unsigned int line_number);
+};
+
+class trigger_notification_subscription_error : public runtime_error {
+public:
+	explicit trigger_notification_subscription_error(const char *trigger_name,
+					  const char *file_name,
+					  const char *function_name,
+					  unsigned int line_number);
+};
 } /* namespace cli */
 }; /* namespace lttng */
 
