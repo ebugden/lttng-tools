@@ -387,6 +387,10 @@ function _run_lttng_cmd
 	local stderr_dest="$2"
 	shift 2
 
+	# TODO: Warn if stdout and stderr are the same file. The behaviour
+	# be incorrect because 1> "$stdout_dest" 2> "$stderr_dest"
+	# One overwrites the other I think
+
 	diag "$TESTDIR/../src/bin/lttng/$LTTNG_BIN $*"
 	$TESTDIR/../src/bin/lttng/$LTTNG_BIN "$@" 1> "$stdout_dest" 2> "$stderr_dest"
 }
@@ -2505,6 +2509,16 @@ function lttng_remove_trigger()
 	else
 		ok $ret "Remove trigger $trigger_name"
 	fi
+}
+
+# Calling the add trigger function above does not work. The current implementation of add trigger expects arguments
+function lttng_add_trigger_notap()
+{
+	local trigger_name="$1"
+	shift 1
+	
+	diag "$TESTDIR/../src/bin/lttng/$LTTNG_BIN remove-trigger $trigger_name $*"
+	$TESTDIR/../src/bin/lttng/$LTTNG_BIN add-trigger --name "$trigger_name" "${args[@]}" 1> /dev/null 2> /dev/null
 }
 
 function lttng_add_trigger_ok()

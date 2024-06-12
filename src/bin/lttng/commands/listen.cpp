@@ -1,5 +1,7 @@
 /*
  * Copyright (C) 2021 EfficiOS Inc.
+ * Does Simon want his name as well?
+ * Copyright (C) 2024 Erica Bugden <ebugden@efficios.com>
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *
@@ -7,18 +9,22 @@
 
 #include "../command.hpp"
 #include "../exception.hpp"
-
+// Will lttng listen only work for UST? e.g. not for kernel tracepoints?
+// TODO: Run the check Simon was talking about to see if there are any unused headers included
 #include "common/argpar/argpar.hpp"
 #include "common/argpar-utils/argpar-utils.hpp"
+// Don't necessarily need to include what I use because it will be included anyways?
 #include "common/error.hpp"
 #include "common/format.hpp"
 #include "common/macros.hpp"
+#include "common/make-unique.hpp"
 #include "vendor/optional.hpp"
 
-#include <unistd.h>
+// Not sure whether to include these here...
 #include <signal.h>
 #include <string>
 #include <sys/time.h>
+#include <unistd.h>
 #include <vector>
 
 namespace {
@@ -34,11 +40,28 @@ const struct argpar_opt_descr listen_options[] = {
 	ARGPAR_OPT_DESCR_SENTINEL,
 };
 
+// TODO: Put things that can be on one line (max 99 characters) on one line
+// TODO: Check if anything should be a function rather than inline
+// Better term for `event_expr`? Captured field descriptions?
 /* Event field printing */
+// TODO: Chuck in a separate file? Nah. It's only useful here.
+// TODO: Call it a printer instead of a formatter? I feel like print is more explicit than format here
+
+// We only have access to the descriptions stated by the user to describe the capture
+// The capture condition. We don't have access to the field names from the tracepoint description
+// Only the top level of data will have labels (because only those captures are described)
+
+// TODO: Hand the name down to the other functions through a class attribute if handing through return values is a pain
+// TSDL trace visitor .cpp has an example of using class attributes to handle exceptions and hand things down
 class event_field_value_formatter {
 public:
+	// TODO: Hand the condition to the constructor instead?
+	// I forget why there needs to be a destructor. I think it's because otherwise there will be a leak? But I don't remember in what context
 	virtual ~event_field_value_formatter() = default;
 
+	// Add more information about what is happening? Are there more specific terms that
+	// could be used?
+	// TODO: Indent things?
 	/*
 	 * Format and print the captured event fields.
 	 *
@@ -48,6 +71,7 @@ public:
 	 */
 	void print_event_field_values(const struct lttng_condition *condition,
 			const struct lttng_event_field_value *field_value) {
+		/* The top level should only ever be an array */
 		enum lttng_event_field_value_type type =
 			lttng_event_field_value_get_type(field_value);
 		LTTNG_ASSERT(type == LTTNG_EVENT_FIELD_VALUE_TYPE_ARRAY);
@@ -62,17 +86,25 @@ public:
 					"Failed to get event field value array length."));
 		}
 
+		// Why is it an arrow?
+		// I need to make sure I'm calling the child class method and not the parent one
+		// Should I not print the array start and end here? Is it more implementation information than something useful for the user? At least for human readable
+		// When do I need to put `this`? how does it know which function i'm talking about? When I'm worried about it using the correct attributes? i.e. for functions it doesn't matter?
+		// I like that it's explicit
 		this->format_array_start();
 
 		for (unsigned int i = 0; i < length; i++) {
+			// How many tabs should wrapped lines be indended by? Sometimes it's one something it's two in the existing code. check with clang format later
 			const struct lttng_event_expr *expr =
 				lttng_condition_event_rule_matches_get_capture_descriptor_at_index(condition, i);
 			LTTNG_ASSERT(expr);
 
+			// Also what happens if there are several arrays in arrays?
 			print_one_event_expr(expr);
 
 			const struct lttng_event_field_value *elem;
 			status = lttng_event_field_value_array_get_element_at_index(field_value, i, &elem);
+			// Below in `print_one_event_expr` the status is checked with an assertion. Should I do that here? If the i is correct, it should never fail.
 			if (status != LTTNG_EVENT_FIELD_VALUE_STATUS_OK) {
 				ERR_FMT("Failed to get event field value array element.");
 				throw std::runtime_error(lttng::format(
@@ -86,6 +118,8 @@ public:
 	}
 
 protected:
+	// How to align wrapped arrays?
+	// Call this function `format_generic` instead? format_anything is more cringe, but more clear imo
 	/* Function that can handle and print any supported captured data types. */
 	void format_anything(const struct lttng_event_field_value *field_value) {
 		enum lttng_event_field_value_type type;
@@ -98,6 +132,7 @@ protected:
 		 *     attribute if necessary later to facilitate machine
 		 *     interface.
 		 */
+		// It's possible that holding on to the field name for reuse may be useful in the future if the machine interfaces and human interface differences don't easily allow for using the same display means
 
 		switch (type) {
 		/*
@@ -105,10 +140,13 @@ protected:
 		 * treated the same as integers when printing since the current
 		 * implementation does not provide a way to know the enumeration
 		 * labels.
+		 * 
+		 * More details available in this code's commit message.
 		 */
 		case LTTNG_EVENT_FIELD_VALUE_TYPE_UNSIGNED_INT:
 		case LTTNG_EVENT_FIELD_VALUE_TYPE_UNSIGNED_ENUM:
 		{
+			//fmt::print("unsigned_int or enum\n");
 			enum lttng_event_field_value_status status;
 			std::uint64_t unsigned_int;
 
@@ -127,6 +165,7 @@ protected:
 		case LTTNG_EVENT_FIELD_VALUE_TYPE_SIGNED_INT:
 		case LTTNG_EVENT_FIELD_VALUE_TYPE_SIGNED_ENUM:
 		{
+			//fmt::print("signed_int or enum\n");
 			enum lttng_event_field_value_status status;
 			std::int64_t signed_int;
 
@@ -144,6 +183,7 @@ protected:
 
 		case LTTNG_EVENT_FIELD_VALUE_TYPE_REAL:
 		{
+			//fmt::print("double");
 			enum lttng_event_field_value_status status;
 			double double_value;
 
@@ -177,6 +217,8 @@ protected:
 
 		case LTTNG_EVENT_FIELD_VALUE_TYPE_ARRAY:
 		{
+			// Why is it an arrow?
+			// I need to make sure I'm calling the child class method and not the parent one
 			this->format_array_start();
 
 			enum lttng_event_field_value_status status;
@@ -210,6 +252,7 @@ protected:
 
 		default:
 			ERR_FMT("Unexpected event field value type ({})", int(type));
+			// Why `__func__` not highlighting correctly?
 			throw lttng::cli::unexpected_type("event field value", int(type), __FILE__, __func__, __LINE__);
 		}
 	}
@@ -219,6 +262,7 @@ protected:
 	 * functions `format_unsigned_int()` and `format_signed_int()`
 	 * respectively.
 	 */
+	// TODO: Call the following functions "print" instead of "format"? More clear I think
 	virtual void format_unsigned_int(std::uint64_t value) = 0;
 	virtual void format_signed_int(std::int64_t value) = 0;
 	virtual void format_real(double value) = 0;
@@ -276,16 +320,21 @@ private:
 
 		case LTTNG_EVENT_EXPR_TYPE_ARRAY_FIELD_ELEMENT:
 		{
+			// Declare while assigning? Instead of declaring above here
 			unsigned int index;
 			const struct lttng_event_expr *parent_expr;
 			enum lttng_event_expr_status status;
 
+			// No idea what's happening here lol. Maybe a good idea to understand.
 			parent_expr = lttng_event_expr_array_field_element_get_parent_expr(event_expr);
 			LTTNG_ASSERT(parent_expr != nullptr);
 
+			// Why does this recurse if there are only titles at the top level...
 			print_one_event_expr(parent_expr);
 
 			status = lttng_event_expr_array_field_element_get_index(event_expr, &index);
+			// Why assertion here vs. Throwing an exception? More condensed and shouldn't happen frequently?
+			// In other similar situations the status is checked and an error is expressed
 			LTTNG_ASSERT(status == LTTNG_EVENT_EXPR_STATUS_OK);
 
 			fmt::print("[{}]: ", index);
@@ -295,6 +344,7 @@ private:
 
 		default:
 			ERR_FMT("Unexpected event expression type ({})", int(type));
+			// Why `__func__` not highlighting correctly?
 			throw lttng::cli::unexpected_type("event expression", int(type), __FILE__, __func__, __LINE__);
 		}
 	}
@@ -303,18 +353,23 @@ private:
 class event_field_value_human_formatter : public event_field_value_formatter {
 protected:
 	void format_unsigned_int(std::uint64_t value) {
+		//fmt::print("format dat unsigned_int!\n");
+		// TODO: Swap all the prints that need a `\n` to println
 		fmt::print("{}\n", value);
 	}
 
 	void format_signed_int(std::int64_t value) {
+		//fmt::print("format dat signed_int!\n");
 		fmt::print("{}\n", value);
 	}
 
 	void format_real(double value) {
+		//fmt::print("format dat real!\n");
 		fmt::print("{}\n", value);
 	}
 
 	void format_string(const char* str) {
+		//fmt::print("format dat string!\n");
 		fmt::print("{}\n", str);
 	}
 
@@ -323,6 +378,8 @@ protected:
 	}
 
 	void format_array_element(const struct lttng_event_field_value *elem) {
+		//fmt::print("format dat array_element!\n");
+		// Does this call the right thing?
 		event_field_value_formatter::format_anything(elem);
 	}
 
@@ -331,6 +388,7 @@ protected:
 	}
 };
 
+// JSON formatter?
 class event_field_value_machine_formatter : public event_field_value_formatter {
 	// TODO!
 };
@@ -338,6 +396,8 @@ class event_field_value_machine_formatter : public event_field_value_formatter {
 /* Notification printing */
 class trigger_notification_formatter{
 public:
+	// I forget why I need an explicit destructor. Is it because the derived class would be destroyed but not this one?
+	// Why does it need to be virtual?
 	virtual ~trigger_notification_formatter() = default;
 
 	void print_notification(struct lttng_notification *notification) {
@@ -388,6 +448,9 @@ public:
 		case LTTNG_CONDITION_TYPE_EVENT_RULE_MATCHES:
 		{
 			/* Retrieve values captured alongside the trigger */
+			// No idea if I should retrieve the captures here or later in the print function conceptually speaking.
+			// Rename field_val to captures? That's what it's called afterwards.
+			// Or is it not captures yet because it may be empty?
 			const struct lttng_event_field_value *captures = NULL;
 			enum lttng_evaluation_event_rule_matches_status evaluation_event_rule_matches_status;
 			evaluation_event_rule_matches_status =
@@ -418,12 +481,16 @@ protected:
 	virtual void print_buffer_usage_high_notification(void) = 0;
 	virtual void print_session_rotation_ongoing_notification(void) = 0;
 	virtual void print_sessiond_rotation_completed_notification(void) = 0;
+	// format_on_event_notification instead?
 	virtual void print_event_notification(struct lttng_notification *notification,
 			const struct lttng_event_field_value *captures) = 0;
 };
 
 class trigger_notification_human_formatter : public trigger_notification_formatter {
 protected:
+	// I don't know how to trigger these functions... types of notifications?
+	// Do you need to subscribe to session rotation notifications?
+	// TODO: Clarify listen's full feature set?
 	void print_session_consumed_size_notification(uint64_t consumed_size) {
 		fmt::print("Session consumed size: {} bytes\n", consumed_size);
 	}
@@ -457,15 +524,32 @@ protected:
 		trigger_status = lttng_trigger_get_name(origin_trigger, &origin_trigger_name);
 		if (trigger_status != LTTNG_TRIGGER_STATUS_OK) {
 			ERR_FMT("Failed to get name origin trigger from notification.");
+			/*
+			 * TODO: Throw a special exception for this. Why? I dunno.
+			 * Vibes that it's especially unusual/important. Why more
+			 * important than other "get" functions?
+			 */
 			throw std::runtime_error(lttng::format(
 					"Failed to get name origin trigger from notification."));
 		}
 
 		fmt::print("Event (trigger {})\n", origin_trigger_name);
 
+		// Explain what's going on here? What the condition is and what's happening
+		// Because I have no idea what's happening
+		// Better names? e.g. instead of "condition"
+		// Is a trigger condition or a notification condition? Is it why the notification was sent?
 		const struct lttng_condition *condition = lttng_notification_get_condition(notification);
 		LTTNG_ASSERT(condition != nullptr);
 
+		/*
+		 * TODO: Get rid of the the check for whether there are captured
+		 * values before trying to retrieve them? (the next ~15 lines
+		 * until `if (captures)`) Can't we just directly try to retrieve
+		 * them and then if there are none there are none? I don't see
+		 * why it would be useful unless it's possible to expect
+		 * captures, but then not receive any.
+		 */
 		/* Check if we expect captured values to print */
 		enum lttng_condition_status condition_status;
 		unsigned int expected_capture_field_count;
@@ -483,6 +567,7 @@ protected:
 		}
 
 		/* Print values captured alongside trigger */
+		// TODO: Is it worth having more specific errors if I just always handle them the same way? I feel like it isn't worth it
 		if (captures) {
 			try {
 				// TODO: Add machine interface
@@ -498,10 +583,12 @@ protected:
 };
 
 /* Trigger subscription */
+// TODO: Write a test for this
 bool trigger_action_has_notify(const struct lttng_action *action) {
 	enum lttng_action_type action_type;
 	action_type = lttng_action_get_type(action);
 
+	// This doesn't feel super robust as it could lead to false negatives.
 	bool has_notify = false;
 
 	if (action_type == LTTNG_ACTION_TYPE_NOTIFY) {
@@ -554,15 +641,20 @@ void subscribe(struct lttng_notification_channel *notification_channel,
 
 	if (check_for_notify_action) {
 		bool trigger_has_notify = false;
+		// This can throw an exception, but I think we can just let it propagate? At least one more level up
 		trigger_has_notify = trigger_action_has_notify(action);
 
 		if (!trigger_has_notify) {
+			// TODO: I'm not sure this should be the default behaviour
+			// I don't think we should subscribe unless it's possible to assign a notify to a trigger after it is created
+			// If it's not possible, we should just not subscribe
 			WARN_FMT("Subscribing to trigger `{}`, but it does not contain a notify action.",
 					trigger_name);
 		}
 	}
 
 	const struct lttng_condition *condition;
+	// I still don't know what a trigger condition is
 	condition = lttng_trigger_get_const_condition(trigger);
 	LTTNG_ASSERT(condition != NULL);
 
@@ -580,6 +672,9 @@ void subscribe(struct lttng_notification_channel *notification_channel,
 
 int cmd_listen(int argc, const char **argv)
 {
+	//sleep(45); // To facilitate attaching with GDB
+	//static volatile int patate=0;
+	//while (!patate);
 	/* Skip "listen" in the list of arguments */
 	int my_argc = argc - 1;
 	const char **my_argv = argv + 1;
@@ -587,8 +682,15 @@ int cmd_listen(int argc, const char **argv)
 	/* Process the command arguments */
 	int ret;
 	std::vector<std::string> requested_trigger_names;
+	// I don't think I do any error management yet in the argument parsing section
+	// TODO: Catch any of the errors in the creation or interating over the arguments? Or let them propagate to the top? Check which commands can throw errors
+	// TODO: Keep any of the assertions in the original code?
+	// TODO: Swap variable type to auto when I understand the type more
 	argpar::Iter<nonstd::optional<argpar::Item>> argpar_iter(my_argc, my_argv, listen_options);
 
+	// TODO: Move the argument processing bits to a function?
+	// TODO: Any error management necessary?
+	// TODO: Clarify that the items are optional? Maybe some documentation should be made for this?
 	while (true) {
 		nonstd::optional<argpar::Item> argpar_item = argpar_iter.next();
 
@@ -603,6 +705,7 @@ int cmd_listen(int argc, const char **argv)
 			switch (option.descr().id) {
 				case OPT_HELP:
 					SHOW_HELP();
+					// Isn't it better to have a single return point?
 					return 0;
 
 				case OPT_LIST_OPTIONS:
@@ -624,51 +727,60 @@ int cmd_listen(int argc, const char **argv)
 		listen_all_triggers = true;
 	}
 
-	/*
-	 * TODO: Move the following two declarations as low as possible
-	 * after gotos no longer used to destroy them.
-	 */
-	struct lttng_notification_channel *notification_channel = NULL;
-	struct lttng_notification *notification = NULL;
-
 	/* Fetch all triggers from sessiond. */
-	struct lttng_triggers *all_triggers = NULL;
+	//struct lttng_triggers *all_triggers = NULL;
+	// TODO: Need to initialize to NULL?
+	std::unique_ptr<struct lttng_triggers*> all_triggers = lttng::make_unique<struct lttng_triggers*>();
 	enum lttng_error_code error_code;
-	error_code = lttng_list_triggers(&all_triggers);
+	// Need to transfer ownership of unique_ptr?
+	error_code = lttng_list_triggers(all_triggers.get());
 	if (error_code != LTTNG_OK) {
+		// TODO: Print error code for more details?
 		ERR_FMT("Failed to list triggers.");
 		goto error;
 	}
 
 	unsigned int all_triggers_count;
 	enum lttng_trigger_status trigger_status;
+	// Can the trigger count be evaluated in the specific case below?
 	trigger_status = lttng_triggers_get_count(
-			all_triggers, &all_triggers_count);
+			*all_triggers, &all_triggers_count);
 	if (trigger_status != LTTNG_TRIGGER_STATUS_OK) {
 		ERR_FMT("Failed to get trigger count.");
 		goto error;
 	}
 
-	notification_channel = lttng_notification_channel_create(
-			lttng_session_daemon_notification_endpoint);
-	if (!notification_channel) {
+	// TODO: I want to create the unique ptr before setting it so the following line isn't 1000 years long. Can I do this?
+	std::unique_ptr<struct lttng_notification_channel*> notification_channel = lttng::make_unique<struct lttng_notification_channel*>(lttng_notification_channel_create(
+			lttng_session_daemon_notification_endpoint));
+	if (!*notification_channel) {
 		ERR_FMT("Failed to create notification channel.");
 		goto error;
 	}
 
 	/* Subscribe to notifications from the triggers we want */
+	/*
+	 * TODO: At the moment we exit as soon as one subscription fails.
+	 * Consider entering the loop if at least one trigger is
+	 * successfully subscribed to.
+	 */
 	bool check_for_notify_action;
 	if (listen_all_triggers) {
+		/* Listen to all triggers. */
 		const struct lttng_trigger *trigger;
 
 		for (unsigned int trigger_i = 0; trigger_i < all_triggers_count;
 				trigger_i++) {
-			trigger = lttng_triggers_get_at_index(all_triggers, trigger_i);
+			trigger = lttng_triggers_get_at_index(*all_triggers, trigger_i);
 
+			// Why are we subscribing to triggers that may not contain notify? (explicit_notif_check is false in the subscribe() function call)
+			// My understanding is that we will never receive news from those triggers if they don't have the notification action
+			// Is it because we're subscribing to all the triggers and don't want to spam? Yeah we just listen to the ones that will send anyways we don't need to warn
 			check_for_notify_action = false;
 			try {
-				subscribe(notification_channel, trigger, check_for_notify_action);
+				subscribe(*notification_channel, trigger, check_for_notify_action);
 			} catch (const lttng::cli::trigger_notification_subscription_error& subscription_exception) {
+				// TODO: Call it a subscription error instead of subscription exception?
 				ERR_FMT(subscription_exception.what());
 				goto error;
 			}
@@ -682,6 +794,8 @@ int cmd_listen(int argc, const char **argv)
 		WARN_FMT("Listening for notifications from all existing triggers.");
 	} else {
 		/*
+		 * Listen to specific triggers. 
+		 *
 		 * Go through each requested trigger name, then through each
 		 * existing trigger.
 		 */
@@ -696,7 +810,7 @@ int cmd_listen(int argc, const char **argv)
 			for (trigger_i = 0; trigger_i < all_triggers_count;
 					trigger_i++) {
 				trigger = lttng_triggers_get_at_index(
-						all_triggers, trigger_i);
+						*all_triggers, trigger_i);
 				const char *trigger_name_char_array;
 
 				trigger_status = lttng_trigger_get_name(
@@ -715,18 +829,21 @@ int cmd_listen(int argc, const char **argv)
 			if (trigger_i == all_triggers_count) {
 				ERR_FMT("Couldn't find a trigger with name `{}`.",
 						requested_trigger_name);
+				// Fail as soon as one trigger is not valid/ doesn't exist? Why not continue?
+				// This is the simplest for now. Make this work first and then do someting more complicated later.
 				goto error;
 			}
 
 			check_for_notify_action = true;
 			try {
-				subscribe(notification_channel, trigger, check_for_notify_action);
+				subscribe(*notification_channel, trigger, check_for_notify_action);
 			} catch (const lttng::cli::trigger_notification_subscription_error& subscription_exception) {
 				ERR_FMT(subscription_exception.what());
 				goto error;
 			}
 		}
 
+		// TODO: Specify the triggers that we're listening to?
 		WARN_FMT("Listening on the specified triggers.");
 	}
 
@@ -738,12 +855,11 @@ int cmd_listen(int argc, const char **argv)
 		enum lttng_notification_channel_status
 				notification_channel_status;
 
-		lttng_notification_destroy(notification);
-		notification = nullptr;
+		std::unique_ptr<struct lttng_notification*> notification = lttng::make_unique<struct lttng_notification*>();
 		notification_channel_status =
 				lttng_notification_channel_get_next_notification(
-						notification_channel,
-						&notification);
+						*notification_channel,
+						notification.get());
 
 		/*
 		 * TODO: Move the human_formatter variable creation in to the
@@ -760,11 +876,18 @@ int cmd_listen(int argc, const char **argv)
 			ret = 0;
 			goto end;
 		case LTTNG_NOTIFICATION_CHANNEL_STATUS_OK:
-			LTTNG_ASSERT(notification != nullptr);
+			LTTNG_ASSERT(*notification != nullptr);
 
+			/*
+			 * Exception handling: Do we want to die as soon as an error
+			 * is thrown? Or keep going unless otherwise specified? Keep
+			 * going would be my reflex. But then we would never end
+			 * unless user explicitly kills us.
+			 */
+			// TODO: Are there static checks to know if I'm handling all the exceptions something can throw?
 			try {
 				// TODO: Add machine interface
-				human_formatter.print_notification(notification);
+				human_formatter.print_notification(*notification);
 			} catch (const lttng::cli::unexpected_type& type_exception) {
 				goto error;
 			} catch (const std::runtime_error& runtime_exception) {
@@ -789,8 +912,5 @@ error:
 	ret = 1;
 
 end:
-	lttng_triggers_destroy(all_triggers);
-	lttng_notification_channel_destroy(notification_channel);
-	lttng_notification_destroy(notification);
 	return ret;
 }

@@ -1,3 +1,5 @@
+# TODO: Read this document and apply it.
+# TODO: Move bits of the wiki tips into this document or other READMEs?
 # Coding style guide
 
 It is said that there is no accounting for taste. However, when it comes to code, we are of the opinion that a _consistent_ style makes it easier to collaborate in a shared code base.
@@ -141,6 +143,22 @@ ffc::grapefruit::grapefruit()
 }
 ```
 
+### Error management
+
+* Use RAII wrappers when managing system resources or interacting with C libraries.
+
+  In other words, don't rely on ``goto``s and error labels to clean up as you would do in C.
+
+* Throw an exception when there's an unexpected, exceptional condition,
+  [including from a constructor](https://isocpp.org/wiki/faq/exceptions#ctors-can-throw), instead of returning a status code.
+
+  However, be mindful of the exception-safety of your users. For instance, `liblttng-ctl` exposes a C interface meaning that is must catch and handle all exceptions, most likely by returning a suitable error code.
+
+  TODO: Point to examples of desired error management
+  TODO: Say that specific exceptions are ok
+
+* TODO: Assertions, when to use them (LTTNG_ASSERT), more is ok
+
 ### File layout example
 
 ```cpp
@@ -252,14 +270,6 @@ Here are a couple of reminders:
 
   For example, use `|` as a bitwise or logical-or, not as a shell-style pipe.
 
-* Use RAII wrappers when managing system resources or interacting with C libraries.
-
-  In other words, don't rely on ``goto``s and error labels to clean up as you would do in C.
-
-* Throw an exception when there's an unexpected, exceptional condition,
-  [including from a constructor](https://isocpp.org/wiki/faq/exceptions#ctors-can-throw), instead of returning a status code.
-
-  However, be mindful of the exception-safety of your users. For instance, `liblttng-ctl` exposes a C interface meaning that is must catch and handle all exceptions, most likely by returning a suitable error code.
 
 * Accept a by-value parameter and move it (when it's moveable) when you intend to copy it anyway. You can do this with most STL containers.
 

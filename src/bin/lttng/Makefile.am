@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
-AM_CPPFLAGS += -DINSTALL_BIN_PATH=\""$(bindir)"\"
+AM_CPPFLAGS += -DINSTALL_BIN_PATH=\""$(bindir)"\" -I$(srcdir)
 
 if EMBED_HELP
 AM_CPPFLAGS += -I$(top_builddir)/doc/man
@@ -36,7 +36,9 @@ lttng_SOURCES = command.hpp conf.cpp conf.hpp commands/start.cpp \
 				commands/remove_trigger.cpp \
 				utils.cpp utils.hpp lttng.cpp \
 				uprobe.cpp uprobe.hpp \
-				exception.hpp exception.cpp
+				exception.hpp exception.cpp \
+				ctl-utils/utils.hpp \
+				ctl-utils/trigger.hpp
 
 lttng_CXXFLAGS = $(AM_CXXFLAGS) $(POPT_CFLAGS)
 

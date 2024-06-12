@@ -4,6 +4,16 @@
  * Copyright (c) 2024 Simon Marchi <simon.marchi@efficios.com>
  */
 
+/* 
+ * TODO: Explain why it's implemented as a template and not explicitly as
+ * nonstd::optional. Because the implementations are different in babeltrace
+ * and in lttng and this means the exact same code can be used in both places.
+ * Either write a comment myself or add it to the review.
+ * Either that or clarify that the code is copied in from a library so it makes
+ * sense that it's a template because each project could have their own implementation
+ * of optional arguments.
+ */
+
 #ifndef ARGPAR_HPP
 #define ARGPAR_HPP
 
@@ -149,6 +159,7 @@ using ArgparItemUP = std::unique_ptr<const argpar_item_t, ArgparItemDeleter>;
 class OptItemView;
 class NonOptItemView;
 
+// Argument element
 class Item
 {
     template <typename OptionalItemT>
@@ -260,6 +271,7 @@ inline NonOptItemView Item::asNonOpt() const noexcept
     return NonOptItemView {*_mItem};
 }
 
+// Iteration
 template <typename OptionalItemT>
 class Iter final
 {

@@ -4,24 +4,49 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
+# TODO: Better test file name? I don't have a good handle on the typical names at this point.
+
 TEST_DESC="Listen (for trigger notifications)"
 
 CURDIR=$(dirname "$0")/
 TESTDIR=$CURDIR/../../..
 
+# TODO: Move to the the memory aid wiki
 # The following line is a shellcheck directive that tells it where to
 # find a sourced file. The directive takes the form of a comment.
 # shellcheck source=../../../utils/utils.sh
 
 source "$TESTDIR/utils/utils.sh"
+# TODO: Remove LTTNG variable when adapted to _run_lttng_cmd
 LTTNG=$TESTDIR/../src/bin/lttng/$LTTNG_BIN
 TESTAPP_PATH="$TESTDIR/utils/testapp"
 GEN_UST_EVENTS_TESTAPP_NAME="gen-ust-events"
 GEN_UST_EVENTS_TESTAPP_BIN="$TESTAPP_PATH/$GEN_UST_EVENTS_TESTAPP_NAME/$GEN_UST_EVENTS_TESTAPP_NAME"
+# TODO: How do I properly determine this number? Currently, I just run the tests and when it complains, I update the number to what it complained about...
+# TODO: Make the number of tests less of a magic number?
 NUM_TESTS=27
+# TODO: Set the number of iterations in each individual test? It doesn't really make sense to set it globally for each test.
 NR_ITER=1
 
+# Split the tests into several files?
+# TODO: Test more things
+# Use the MI for the tests instead of the human interface
+# Primary tests:
+# Capture all possible types of values? (also capture context values? e.g. procname)
+# Secondary tests:
+# Listen to all triggers and then creating new triggers (are the notifications received? do we want them to do be? i think we do want them to. require specifying triggers until we can listen for new trigger registration?)
+# Trying to listen to a trigger that doesn't exist 
+# Trying to listen to a trigger that doesn't exist (and one that does (do we want this to fail?))
+# Trying to listen to a trigger when no triggers exist
+
+# TODO: It feels like there's a lot of code duplication in the tests and
+# that making changes to their structure could be heavy. I debated
+# Making the common code a function, but maybe that's more hassle than
+# it's worth considering that some tests have more than one trigger.
+
 # TODO: Chuck into utils.sh instead?
+# TODO: If I do chuck this into utils, check if there are other tests
+# that do this kind of operation.
 function wait_until_n_lines_in_file {
 	local file_path=$1
 	local expected_line_count=$2
@@ -42,6 +67,8 @@ function handle_sigusr1() {
 	LISTEN_IS_READY=1
 }
 
+# TODO: Feel really unsure about terminology here "The LTTng listen application"?
+# How do they spell "lttng" in the rest of the tests?
 # LTTng listen application will emit SIGUSR1 when it is ready to receive
 # trigger notifications.
 trap handle_sigusr1 SIGUSR1
@@ -62,6 +89,9 @@ function launch_lttng_listen {
 	# the test script.
 	#
 	# TODO: Fix listen command to make it not buffer output
+	# We're not sure why it doesn't buffer right now because it does
+	# print '\n' at the end of each line which would typically result in
+	# a flush.
 	# Explicitly running the listen command with no buffering is
 	# currently required for this test to pass as expected.
 	#
@@ -76,6 +106,9 @@ function launch_lttng_listen {
 	local lttng_listen_pid=$!
 
 	# Wait for listen to either send SIGUSR1 or exit
+	# TODO: Is there something I can write instead of -0? like NULL?
+	# TODO: Brackets or not on the while loop condition? I think it's just a different syntax?
+	# TODO: Remove the diag messages? Is it too much detail?
 	while kill -0 $lttng_listen_pid 2>/dev/null; do
 		if [ $LISTEN_IS_READY -eq 1 ]; then
 			diag "Proceed with test since the LTTng listen application is ready."
@@ -95,6 +128,8 @@ function launch_lttng_listen {
 # Call lttng listen with no arguments
 function test_listen_all_triggers {
 	local test_desc="Implicitly listen for all trigger notifications (No arguments)"
+	# TODO: Give all triggers a different name to prevent variable scope shenanigans and tests accidentally passing?
+	# Just need to list as local to the function i think.
 	local trigger_name="trigger1"
 	local actual_output=$(mktemp --tmpdir test-listen-cli-actual-output.XXXXXX)
 
@@ -166,6 +201,7 @@ function test_listen_all_triggers {
 	echo # Empty line for readability
 }
 
+# TODO: Remove this test? Redundant with checking for two triggers explicitly?
 function test_listen_one_trigger {
 	local test_desc="Listen for one trigger notification"
 	local trigger_name="trigger1"
@@ -494,6 +530,7 @@ function test_listen_two_triggers_implicitly {
 	echo # Empty line for readability
 }
 
+# TODO: Listen to all event field types?
 function test_listen_with_event_fields {
 	local test_desc="Listen for one trigger notification with captured event field values"
 	local trigger_name="trigger1"
@@ -501,6 +538,7 @@ function test_listen_with_event_fields {
 
 	diag "$test_desc"
 
+	# The fields to capture are described by their field name in `TP_FIELDS` the application tracepoint header (e.g. --capture 'intfield')
 	lttng_add_trigger_ok \
 		$trigger_name \
 		--condition event-rule-matches --type user --name tp:tptest \
@@ -579,6 +617,7 @@ function test_listen_without_notify_action {
 	diag "$test_desc"
 
 	local session_name="my-session"
+	# TODO: Create and destroy the session with the testing system instead? utils.sh or something
 	"$LTTNG" create "$session_name" --snapshot --output /tmp/demo-output
 
 	lttng_add_trigger_ok \
@@ -648,11 +687,85 @@ function test_listen_without_notify_action {
 	echo # Empty line for readability
 }
 
+function test_listen_trigger_does_not_exist {
+	local test_desc="Listen to a trigger that does not exist"
+	local trigger_name="trigger1"
+	local actual_output=$(mktemp --tmpdir test-listen-cli-actual-output.XXXXXX)
+
+	diag "$test_desc"
+
+	# Do not define any triggers
+
+	# Launch lttng listen
+	launch_lttng_listen "$actual_output" "$trigger_name"
+
+	if [ $? -eq 1 ]; then
+		diag "The LTTng listen application failed to launch. Abort test case."
+		diag "LTTng listen output:"
+		diag "$(cat "$actual_output")"
+		fail "$test_desc"
+	else
+		# The following line gets the correct pid as long as the function
+		# launching listen doesn't launch any other tasks in the background.
+		local lttng_listen_pid=$!
+
+		# Artificially produce the desired event-rule condition
+		$GEN_UST_EVENTS_TESTAPP_BIN --iter $NR_ITER
+
+		# Define expected output
+		local expected_output=$(mktemp --tmpdir test-listen-cli-expected-output.XXXXXX)
+
+		# The '-' in `<<-` means that the leading tabs in the following
+		# "Here document" are ignored.
+		cat > "$expected_output" <<- EOF
+		Warning: Subscribing to trigger \`trigger1\`, but it does not contain a notify action.
+		Warning: Listening on the specified triggers.
+		EOF
+
+		# Wait for the trigger notifications to be received
+		local expected_output_n_lines=$(wc --lines < "$expected_output")
+		diag "Wait until the output has the expected number of lines."
+		#wait_until_n_lines_in_file "$actual_output" "$expected_output_n_lines"
+		sleep 2
+
+		# Send the SIGTERM signal
+		kill $lttng_listen_pid
+
+		# Wait for the process to exit
+		wait $lttng_listen_pid
+
+		# Check expected output
+		#
+		# Redirect stdout to stderr (1>&2) so that the test output (stdout)
+		# remains a valid TAP stream even if the files are not identical.
+		#
+		# If the files are identical, no output will be generated. If they
+		# are different, the diff will show.
+		diff --unified "$expected_output" "$actual_output" 1>&2
+
+		# diff returns 0 if the contents are identical and 1 if they differ.
+		ok $? "$test_desc"
+
+		# Tear down
+		rm "$expected_output"
+	fi
+
+	# Tear down
+	rm "$actual_output"
+
+	echo # Empty line for readability
+}
+
+# Can the test plan be printed after the test banner? Does it have to be first? I wouldn't imagine it can't
+# TODO: Explain why must set TESTDIR before calling the following functions
 # MUST set TESTDIR before calling the following functions
 plan_tests $NUM_TESTS
 
 print_test_banner "$TEST_DESC"
+# TODO: Check if need `bail_out_if_no_babeltrace` like in the start_stop trigger test
+#bail_out_if_no_babeltrace
 
+# If need more information about what's happening with the session daemon can launch it separately with -vvv
 start_lttng_sessiond_notap
 
 echo # Empty line for readability
@@ -664,5 +777,6 @@ test_listen_two_triggers_same_event_rule
 test_listen_two_triggers_implicitly
 test_listen_with_event_fields
 test_listen_without_notify_action
+test_listen_trigger_does_not_exist
 
 stop_lttng_sessiond_notap

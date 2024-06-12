@@ -12,6 +12,7 @@
 
 #include <sstream>
 
+// TODO: Why are the arguments aligned this way?
 lttng::cli::no_default_session_error::no_default_session_error(const char *file_name,
 							       const char *function_name,
 							       unsigned int line_number) :
@@ -23,6 +24,7 @@ lttng::cli::no_default_session_error::no_default_session_error(const char *file_
 {
 }
 
+// What's up with this manual spacing? What's the rationale? Is it some automatic formatting?
 lttng::cli::unexpected_type::unexpected_type(const char *object_name,
 								   int type,
 								   const char *file_name,
