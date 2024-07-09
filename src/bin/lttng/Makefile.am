@@ -4,7 +4,7 @@
 
 include $(top_srcdir)/aminclude_static.am
 
-AM_CPPFLAGS += -DINSTALL_BIN_PATH=\""$(bindir)"\"
+AM_CPPFLAGS += -DINSTALL_BIN_PATH=\""$(bindir)"\" -I$(srcdir)
 
 if EMBED_HELP
 AM_CPPFLAGS += -I$(top_builddir)/doc/man
@@ -57,6 +57,9 @@ lttng_SOURCES = command.hpp conf.cpp conf.hpp commands/start.cpp \
 				commands/export-maps-mi.cpp commands/export-maps-mi.hpp \
 				utils.cpp utils.hpp lttng.cpp \
 				uprobe.cpp uprobe.hpp \
+				ctl-utils/utils.hpp \
+				ctl-utils/notification.hpp \
+				ctl-utils/trigger.hpp \
 				exception.hpp exception.cpp
 
 lttng_CXXFLAGS = $(AM_CXXFLAGS) $(POPT_CFLAGS)
