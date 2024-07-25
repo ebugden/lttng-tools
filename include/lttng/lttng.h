@@ -83,7 +83,8 @@ enum lttng_calibrate_type {
 
 /* Machine interface output type */
 enum lttng_mi_output_type {
-	LTTNG_MI_XML = 1 /* XML output */
+	LTTNG_MI_XML = 1, /* XML output */
+	LTTNG_MI_JSON_LINES = 2 /* JSON Lines output */
 };
 
 #define LTTNG_CALIBRATE_PADDING1 16

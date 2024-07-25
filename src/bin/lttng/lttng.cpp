@@ -114,6 +114,8 @@ static int mi_output_type(const char *output_type)
 
 	if (!strncasecmp("xml", output_type, 3)) {
 		ret = LTTNG_MI_XML;
+	} else if (!strncasecmp("json-lines", output_type, 10)) {
+		ret = LTTNG_MI_JSON_LINES;
 	} else {
 		/* Invalid output format */
 		ERR_FMT("Requested machine interface (MI) output format `{}` not supported",
@@ -177,6 +179,19 @@ static int handle_command(int argc, char **argv)
 	while (cmd->name != nullptr) {
 		/* Find command */
 		if (strcmp(argv[0], cmd->name) == 0) {
+			/*
+			 * Exception: lttng-listen is the only command
+			 * that supports the JSON Lines MI format.
+			 */
+			if ((lttng_opt_mi == LTTNG_MI_JSON_LINES) &&
+			    (strcmp(cmd->name, "listen") != 0)) {
+				ERR_FMT("Command `lttng {}` does not support machine interface (MI) output format `json-lines`",
+					cmd->name);
+				ret = CMD_ERROR;
+				goto end;
+			}
+
+			/* Run command */
 			try {
 				ret = cmd->func(argc, (const char **) argv);
 			} catch (const std::exception& e) {
