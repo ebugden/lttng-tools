@@ -116,7 +116,8 @@ static int mi_output_type(const char *output_type)
 		ret = LTTNG_MI_XML;
 	} else {
 		/* Invalid output format */
-		ERR("MI output format not supported");
+		ERR_FMT("Requested machine interface (MI) output format `{}` not supported",
+			output_type);
 		ret = -LTTNG_ERR_MI_OUTPUT_TYPE;
 	}
 
