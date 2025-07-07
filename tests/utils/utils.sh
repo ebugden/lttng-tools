@@ -309,6 +309,19 @@ function get_pipe_max_size()
 	fi
 }
 
+# Assert that there is no handler currently registered for a signal.
+#  $1 = The signal name (e.g. SIGUSR1)
+#
+# Intended usage: Before registering a signal handler.
+function assert_no_handler_registered_for_signal()
+{
+	local signal_name=$1
+
+	if [ "$(trap -p "$signal_name")" != "" ]; then
+		LTTNG_BAIL_OUT "Signal ${signal_name} already has a registered handler. The testing code must be adjusted."
+	fi
+}
+
 # Return a space-separated string of online CPU IDs, based on
 # /sys/devices/system/cpu/online, or from 0 to nproc - 1 otherwise.
 function get_online_cpus()
@@ -955,6 +968,7 @@ function start_lttng_relayd_opt()
 	pid_file="$(mktemp -u)"
 	opts+=('--pid-file' "${pid_file}" "--sig-parent")
 	wait_until_ready=1
+	assert_no_handler_registered_for_signal SIGUSR1
 	trap 'wait_until_ready=0' SIGUSR1
 	# shellcheck disable=SC2086
 	if [[ -n "${log_file}" ]]; then
@@ -1170,6 +1184,7 @@ function start_lttng_sessiond_opt()
 	export LTTNG_SESSION_CONFIG_XSD_PATH
 
 	wait_until_ready=1
+	assert_no_handler_registered_for_signal SIGUSR1
 	trap 'wait_until_ready=0' SIGUSR1
 	if [ -n "$load_path" ]; then
 		diag "env $env_vars --load $load_path $consumerd ${opts[*]}"
