@@ -3026,50 +3026,83 @@ function lttng_clear_all ()
 
 function lttng_add_trigger()
 {
-	local expected_to_fail="$1"
-	local trigger_name="$2"
-	shift 2
+	local withtap="$1"
+	local expected_to_fail="$2"
+	local trigger_name="$3"
+	shift 3
 	local args=("$@")
 
-	_run_lttng_cmd "$(lttng_client_log_file)" "$(lttng_client_err_file)" add-trigger --name "${trigger_name}" "${args[@]}"
+	_run_lttng_cmd "$(lttng_client_log_file)" "$(lttng_client_err_file)" \
+		add-trigger --name "${trigger_name}" "${args[@]}"
 	ret=$?
 	if [[ $expected_to_fail -eq "1" ]]; then
 		test "$ret" -ne "0"
-		ok $? "Add trigger $trigger_name failed as expected"
+		ret=$?
+		if [ $withtap -eq "1" ]; then
+			ok $ret "Add trigger $trigger_name failed as expected"
+		else
+			diag "Add trigger $trigger_name failed as expected"
+		fi
 	else
-		ok $ret "Add trigger $trigger_name"
+		if [ $withtap -eq "1" ]; then
+			ok $ret "Add trigger $trigger_name"
+		else
+			diag "Added trigger $trigger_name"
+		fi
 	fi
 }
 
 function lttng_remove_trigger()
 {
-	local expected_to_fail="$1"
-	local trigger_name="$2"
-	shift 2
+	local withtap="$1"
+	local expected_to_fail="$2"
+	local trigger_name="$3"
+	shift 3
+	local args=("$@")
 
-	_run_lttng_cmd "$(lttng_client_log_file)" "$(lttng_client_err_file)" remove-trigger "${trigger_name}" "${@}"
+	_run_lttng_cmd "$(lttng_client_log_file)" "$(lttng_client_err_file)" \
+		remove-trigger "${trigger_name}" "${@}"
 	ret=$?
-	if [[ $expected_to_fail -eq "1" ]]; then
+		if [[ $expected_to_fail -eq "1" ]]; then
 		test "$ret" -ne "0"
-		ok $? "Remove trigger $trigger_name failed as expected"
+		ret=$?
+		if [ $withtap -eq "1" ]; then
+			ok $ret "Remove trigger $trigger_name failed as expected"
+		else
+			diag "Remove trigger $trigger_name failed as expected"
+		fi
 	else
-		ok $ret "Remove trigger $trigger_name"
+		if [ $withtap -eq "1" ]; then
+			ok $ret "Remove trigger $trigger_name"
+		else
+			diag "Removed trigger $trigger_name"
+		fi
 	fi
 }
 
 function lttng_add_trigger_ok()
 {
-	lttng_add_trigger 0 "$@"
+	lttng_add_trigger 1 0 "$@"
 }
 
 function lttng_add_trigger_fail()
 {
-	lttng_add_trigger 1 "$@"
+	lttng_add_trigger 1 1 "$@"
+}
+
+function lttng_add_trigger_notap ()
+{
+	lttng_add_trigger 0 0 "$@"
 }
 
 function lttng_remove_trigger_ok()
 {
-	lttng_remove_trigger 0 "$@"
+	lttng_remove_trigger 1 0 "$@"
+}
+
+function lttng_remove_trigger_notap ()
+{
+	lttng_remove_trigger 0 0 "$@"
 }
 
 function list_triggers_matches_ok ()
