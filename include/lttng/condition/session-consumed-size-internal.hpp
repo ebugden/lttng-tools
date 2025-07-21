@@ -34,6 +34,15 @@ struct lttng_condition_session_consumed_size_comm {
 	char session_name[];
 } LTTNG_PACKED;
 
+/*
+ * Conceptually, the specific evaluation type (e.g. recording session
+ * consumed data size) is the child object and the `lttng_evaluation` is
+ * the parent object. However, in memory, the parent is stored within
+ * the child object as its first element.
+ *
+ * This mirrors how inheritance works behind the scenes in C++, where
+ * the parent of a derived class is stored as its first attribute.
+ */
 struct lttng_evaluation_session_consumed_size {
 	struct lttng_evaluation parent;
 	uint64_t session_consumed;
