@@ -94,7 +94,7 @@ LTTNG_EXPORT extern struct lttng_condition *lttng_condition_buffer_usage_high_cr
 
 /*!
 @brief
-    Sets \lt_p{*threshold} to the \lt_obj_channel buffer usage ratio
+    Gets \lt_p{*threshold} to the \lt_obj_channel buffer usage ratio
     threshold of the “channel buffer usage becomes greater/less than”
     trigger condition \lt_p{condition}.
 
@@ -103,7 +103,7 @@ LTTNG_EXPORT extern struct lttng_condition *lttng_condition_buffer_usage_high_cr
     trigger condition of which to get the
     channel buffer usage ratio threshold.
 @param[out] threshold
-    <strong>On success</strong>, this function sets \lt_p{*threshold}
+    <strong>On success</strong>, this function gets \lt_p{*threshold}
     to the channel buffer usage ratio (between&nbsp;0 and&nbsp;1)
     threshold of \lt_p{condition}.
 
@@ -174,7 +174,7 @@ lttng_condition_buffer_usage_set_threshold_ratio(struct lttng_condition *conditi
 
 /*!
 @brief
-    Sets \lt_p{*threshold} to the channel buffer usage size
+    Gets \lt_p{*threshold} to the channel buffer usage size
     (bytes) threshold of the
     “channel buffer usage becomes greater/less than”
     trigger condition \lt_p{condition}.
@@ -252,7 +252,7 @@ lttng_condition_buffer_usage_set_threshold(struct lttng_condition *condition, ui
 
 /*!
 @brief
-    Sets \lt_p{*session_name} to the target \lt_obj_session name of the
+    Gets \lt_p{*session_name} to the target \lt_obj_session name of the
     “channel buffer usage becomes greater/less than” trigger
     condition \lt_p{condition}.
 
@@ -328,7 +328,7 @@ lttng_condition_buffer_usage_set_session_name(struct lttng_condition *condition,
 
 /*!
 @brief
-    Sets \lt_p{*channel_name} to the target \lt_obj_channel name of the
+    Gets \lt_p{*channel_name} to the target \lt_obj_channel name of the
     “channel buffer usage becomes greater/less than” trigger
     condition \lt_p{condition}.
 
@@ -404,7 +404,7 @@ lttng_condition_buffer_usage_set_channel_name(struct lttng_condition *condition,
 
 /*!
 @brief
-    Sets \lt_p{*domain} to the target \lt_obj_domain of the
+    Gets \lt_p{*domain} to the target \lt_obj_domain of the
     “channel buffer usage becomes greater/less than” trigger
     condition \lt_p{condition}.
 
@@ -479,7 +479,7 @@ lttng_condition_buffer_usage_set_domain_type(struct lttng_condition *condition,
 
 /*!
 @brief
-    Sets \lt_p{*usage} to the captured \lt_obj_channel
+    Gets \lt_p{*usage} to the captured \lt_obj_channel
     buffer usage ratio of the
     “channel buffer usage becomes greater/less than” trigger
     condition evaluation \lt_p{evaluation}.
@@ -516,7 +516,7 @@ lttng_evaluation_buffer_usage_get_usage_ratio(const struct lttng_evaluation *eva
 
 /*!
 @brief
-    Sets \lt_p{*usage} to the captured \lt_obj_channel
+    Gets \lt_p{*usage} to the captured \lt_obj_channel
     buffer usage size of the
     “channel buffer usage becomes greater/less than” trigger
     condition evaluation \lt_p{evaluation}.
