@@ -19,7 +19,10 @@ FULL_LTTNG_BIN="$TESTDIR/../src/bin/lttng/$LTTNG_BIN"
 NOTIFICATION_CLIENT_BIN="$CURDIR/../utils/notification-client"
 NUM_TESTS=18
 
-NR_ITER=5
+# TODO: Update to check whether the test passes consistently with just one iteration
+# The test emits 5 notifs, but doesn't check that 5 were received 
+# In practice, if 1/5 was received, the test would still pass which is more robust than we want
+NR_ITER=1
 NR_USEC_WAIT=5
 
 function lttng_session_is_active()
