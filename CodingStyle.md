@@ -1,3 +1,4 @@
+# TODO: Move bits of the wiki tips into this document or other READMEs?
 # Coding style guide
 
 It is said that there is no accounting for taste. However, when it comes to code, we are of the opinion that a _consistent_ style makes it easier to collaborate in a shared code base.
@@ -151,6 +152,11 @@ ffc::grapefruit::grapefruit()
   [including from a constructor](https://isocpp.org/wiki/faq/exceptions#ctors-can-throw), instead of returning a status code.
 
   However, be mindful of the exception-safety of your users. For instance, `liblttng-ctl` exposes a C interface meaning that is must catch and handle all exceptions, most likely by returning a suitable error code.
+
+  TODO: Point to examples of desired error management
+  TODO: Say that specific exceptions are ok
+
+* TODO: Assertions, when to use them (LTTNG_ASSERT), more is ok
 
 ### File layout example
 
