@@ -16,6 +16,16 @@
 
 #include <stdarg.h>
 
+/* 
+ * TODO: Explain why it's implemented as a template and not explicitly as
+ * nonstd::optional. Because the implementations are different in babeltrace
+ * and in lttng and this means the exact same code can be used in both places.
+ * Either write a comment myself or add it to the review.
+ * Either that or clarify that the code is copied in from a library so it makes
+ * sense that it's a template because each project could have their own implementation
+ * of optional arguments.
+ */
+
 #define WHILE_PARSING_ARG_N_ARG_FMT "While parsing argument #%d (`%s`): "
 
 enum parse_next_item_status {
