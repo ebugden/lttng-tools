@@ -882,6 +882,8 @@ end:
 	return status;
 }
 
+// TODO: Clarify why something that is called get_capture_descriptor returns and event expression
+// The event expression is the capture descriptor? Can an event expression be used in other ways?
 const struct lttng_event_expr *lttng_condition_event_rule_matches_get_capture_descriptor_at_index(
 	const struct lttng_condition *condition, unsigned int index)
 {
