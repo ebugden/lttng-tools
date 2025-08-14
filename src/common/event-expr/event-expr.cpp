@@ -238,6 +238,10 @@ end:
 	return ret;
 }
 
+/*
+ * Using the base class `lttng_event_expr`, retrieve the derived class's
+ * `lttng_event_expr_array_field_element` array field expression.
+ */
 const struct lttng_event_expr *
 lttng_event_expr_array_field_element_get_parent_expr(const struct lttng_event_expr *expr)
 {

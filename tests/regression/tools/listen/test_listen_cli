@@ -4,24 +4,49 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
+# TODO: Better test file name? I don't have a good handle on the typical names at this point.
+# TODO: Decide whether to have brackets on all the test conditions even if not mandatory. Maybe there's a stylistic recommendation?
+
 TEST_DESC="Listen (for trigger notifications)"
 
 CURDIR=$(dirname "$0")/
 TESTDIR=$CURDIR/../../..
 
+# TODO: Move to the the memory aid wiki
 # The following line is a shellcheck directive that tells it where to
 # find a sourced file. The directive takes the form of a comment.
 # shellcheck source=../../../utils/utils.sh
 
 source "$TESTDIR/utils/utils.sh"
+# TODO: Remove LTTNG variable when adapted to _run_lttng_cmd
 LTTNG=$TESTDIR/../src/bin/lttng/$LTTNG_BIN
 TESTAPP_PATH="$TESTDIR/utils/testapp"
 GEN_UST_EVENTS_TESTAPP_NAME="gen-ust-events"
 GEN_UST_EVENTS_TESTAPP_BIN="$TESTAPP_PATH/$GEN_UST_EVENTS_TESTAPP_NAME/$GEN_UST_EVENTS_TESTAPP_NAME"
+# TODO: How do I properly determine this number? Currently, I just run the tests and when it complains, I update the number to what it complained about...
+# TODO: Make the number of tests less of a magic number?
 NUM_TESTS=9
+# TODO: Set the number of iterations in each individual test? It doesn't really make sense to set it globally for each test.
 NR_ITER=1
 
-# TODO: Chuck into utils.sh instead?
+# Split the tests into several files?
+# TODO: Test more things
+# Primary tests:
+# Capture all possible types of values? (also capture context values? e.g. procname)
+# Secondary tests:
+# Listen to all triggers and then creating new triggers (are the notifications received? do we want them to do be? i think we do want them to. require specifying triggers until we can listen for new trigger registration?)
+# Trying to listen to a trigger that doesn't exist 
+# Trying to listen to a trigger that doesn't exist (and one that does (do we want this to fail?))
+# Trying to listen to a trigger when no triggers exist
+
+# TODO: It feels like there's a lot of code duplication in the tests and
+# that making changes to their structure could be heavy. I debated
+# Making the common code a function, but maybe that's more hassle than
+# it's worth considering that some tests have more than one trigger.
+
+# TODO: Chuck into utils.sh instead? I think that would be a good idea
+# TODO: If I do chuck this into utils, check if there are other tests
+# that do this kind of operation.
 function wait_until_n_lines_in_file {
 	local file_path=$1
 	local expected_line_count=$2
@@ -29,7 +54,11 @@ function wait_until_n_lines_in_file {
 	while [ "$(wc --lines < "$file_path")" -lt "$expected_line_count" ]
 	do
 		sleep 0.1
+		#echo "file contents"
+		#cat "$file_path"
 	done
+
+	cat "$file_path"
 }
 
 # Flag to indicate whether the LTTng listen application is ready to
@@ -61,6 +90,7 @@ function launch_lttng_listen {
 	# makes it less likely for folks to forget to call the built binary
 	# instead of their locally installed version of lttng.
 	# e.g. _run_lttng_cmd "$output_dest" "$error_dest" listen "$@" &
+	#stdbuf --output=0 \
 	"$LTTNG" listen --signal-when-ready "$@" &>"$output_dest" &
 
 	local lttng_listen_pid=$!
@@ -100,6 +130,7 @@ function launch_lttng_listen_machine_interface_json {
 	# makes it less likely for folks to forget to call the built binary
 	# instead of their locally installed version of lttng.
 	# e.g. _run_lttng_cmd "$output_dest" "$error_dest" listen "$@" &
+	#stdbuf --output=0 \
 	"$LTTNG" --mi=json-lines listen --signal-when-ready "$@" &>"$output_dest" &
 
 	local lttng_listen_pid=$!
@@ -139,6 +170,7 @@ function launch_lttng_listen_machine_interface_xml {
 	# makes it less likely for folks to forget to call the built binary
 	# instead of their locally installed version of lttng.
 	# e.g. _run_lttng_cmd "$output_dest" "$error_dest" listen "$@" &
+	#stdbuf --output=0 \
 	"$LTTNG" --mi=xml listen --signal-when-ready "$@" &>"$output_dest" &
 
 	local lttng_listen_pid=$!
@@ -474,6 +506,7 @@ function test_listen_two_triggers_machine_interface_json {
 	echo # Empty line for readability
 }
 
+# I'm using TAP a bit weirdly in the next case...
 # The following test should fail since XML is not a supported machine
 # interface format for `lttng listen`.
 function test_listen_two_triggers_machine_interface_xml {
@@ -725,6 +758,7 @@ function test_listen_two_triggers_implicitly {
 	echo # Empty line for readability
 }
 
+# TODO: Listen to all event field types?
 function test_listen_with_event_fields {
 	local test_desc="Listen for one trigger notification with captured event field values"
 	local trigger_name="trigger1"
@@ -732,6 +766,7 @@ function test_listen_with_event_fields {
 
 	diag "$test_desc"
 
+	# The fields to capture are described by their field name in `TP_FIELDS` the application tracepoint header (e.g. --capture 'intfield')
 	lttng_add_trigger_notap \
 		$trigger_name \
 		--condition event-rule-matches --type user --name tp:tptest \
@@ -810,6 +845,7 @@ function test_listen_without_notify_action {
 	diag "$test_desc"
 
 	local session_name="my-session"
+	# TODO: Create and destroy the session with the testing system instead? utils.sh or something
 	"$LTTNG" create "$session_name" --snapshot --output /tmp/demo-output
 
 	lttng_add_trigger_notap \
@@ -954,6 +990,11 @@ plan_tests $NUM_TESTS
 
 print_test_banner "$TEST_DESC"
 
+# TODO: Check if need `bail_out_if_no_babeltrace` like in the start_stop trigger test
+# I don't think we use babeltrace here...
+#bail_out_if_no_babeltrace
+
+# If need more information about what's happening with the session daemon can launch it separately with -vvv
 start_lttng_sessiond_notap
 
 # If the signal is not already in use, register the handler for the

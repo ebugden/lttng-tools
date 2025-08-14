@@ -643,7 +643,7 @@ function _run_lttng_cmd
 		opts=('-vvv' "${opts[@]}")
 	fi
 
-	diag "$TESTDIR/../src/bin/lttng/$LTTNG_BIN ${opts[*]}"
+	diag "Run $TESTDIR/../src/bin/lttng/$LTTNG_BIN ${opts[*]}"
 	if [[ -n "${stdout_dest}" ]] && [[ -n "${stderr_dest}" ]] ; then
 		if [[ "${stdout_dest}" == "${stderr_dest}" ]] ; then
 			$TESTDIR/../src/bin/lttng/$LTTNG_BIN "${opts[@]}" >"${stdout_dest}" 2>&1

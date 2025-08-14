@@ -26,6 +26,7 @@
  * This approach ensures that all necessary utilities are available without the need to include
  * individual files separately.
  */
+// TODO: Replace this and all related headers with C++ API for liblttng-ctl
 
 #define CTL_UTILS_INCLUDED
 #include "notification.hpp"
