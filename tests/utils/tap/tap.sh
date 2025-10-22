@@ -5,6 +5,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
+# 🛑 Do not write new LTTng tests with this Bash test infrastructure.
+#
+# There is now newer test infrastructure, but this older infrastructure
+# is still needed by older tests.
+
 _version='1.01'
 
 _plan_set=0
