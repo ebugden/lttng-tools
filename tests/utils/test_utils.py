@@ -5,6 +5,11 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
+# 🛑 Do not write new LTTng tests using the functions in this file.
+#
+# There is now newer test infrastructure, but this older Python
+# infrastructure is still used by some older tests.
+
 import uuid
 import os
 import subprocess
