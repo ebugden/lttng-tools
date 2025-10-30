@@ -765,6 +765,7 @@ SPDX-License-Identifier: MIT
 			<xs:element name="enabled" type="xs:boolean" default="false" minOccurs="0" />
 			<xs:element name="snapshot_mode" type="tns:uint32_type" minOccurs="0" />
 			<xs:element name="live_timer_interval" type="tns:uint32_type" minOccurs="0" />
+			<xs:element name="location" type="tns:location_type" minOccurs="0" />
 			<xs:element name="channels" type="tns:channels_type" minOccurs="0" />
 			<xs:element name="domains" type="tns:domains_type" minOccurs="0" />
 			<xs:element name="snapshots" type="tns:snapshots_type" minOccurs="0" />

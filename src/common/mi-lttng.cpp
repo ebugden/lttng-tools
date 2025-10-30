@@ -974,17 +974,9 @@ int mi_lttng_sessions_open(struct mi_writer *writer)
 	return mi_lttng_writer_open_element(writer, config_element_sessions);
 }
 
-int mi_lttng_session(struct mi_writer *writer, const struct lttng_session *session, int is_open)
+static int mi_lttng_session_content(struct mi_writer *writer, const struct lttng_session *session)
 {
 	int ret;
-
-	LTTNG_ASSERT(session);
-
-	/* Open sessions element */
-	ret = mi_lttng_writer_open_element(writer, config_element_session);
-	if (ret) {
-		goto end;
-	}
 
 	/* Name of the session */
 	ret = mi_lttng_writer_write_element_string(writer, config_element_name, session->name);
@@ -1018,10 +1010,84 @@ int mi_lttng_session(struct mi_writer *writer, const struct lttng_session *sessi
 		goto end;
 	}
 
+end:
+	return ret;
+}
+
+int mi_lttng_session(struct mi_writer *writer, const struct lttng_session *session, int is_open)
+{
+	int ret;
+
+	LTTNG_ASSERT(session);
+
+	/* Open sessions element */
+	ret = mi_lttng_writer_open_element(writer, config_element_session);
+	if (ret) {
+		goto end;
+	}
+
+	ret = mi_lttng_session_content(writer, session);
+
 	if (!is_open) {
 		/* Closing session element */
 		ret = mi_lttng_writer_close_element(writer);
 	}
+
+end:
+	return ret;
+}
+
+static int mi_lttng_location(struct mi_writer *writer,
+			     const struct lttng_trace_archive_location *location);
+
+int mi_lttng_session_with_trace_archive_location(
+	struct mi_writer *writer,
+	const struct lttng_session *session,
+	int is_open,
+	const struct lttng_trace_archive_location *trace_archive_location)
+{
+	int ret;
+
+	LTTNG_ASSERT(session);
+
+	/* Open sessions element */
+	ret = mi_lttng_writer_open_element(writer, config_element_session);
+	if (ret) {
+		goto end;
+	}
+
+	ret = mi_lttng_session_content(writer, session);
+
+	/*
+	 * Trace archive location
+	 *
+	 * Not all sessions will have a trace archive location, but if
+	 * it does (e.g. if a rotation was performed) then print it.
+	 */
+	if (trace_archive_location) {
+		ret = mi_lttng_writer_open_element(writer, mi_lttng_element_rotation_location);
+		if (ret) {
+			goto end;
+		}
+
+		ret = mi_lttng_location(writer, trace_archive_location);
+		if (ret) {
+			goto close_location;
+		}
+
+close_location:
+		/* Close location element */
+		ret = mi_lttng_writer_close_element(writer);
+		if (ret) {
+			goto end;
+		}
+	}
+
+	if (!is_open) {
+		/* Closing session element */
+		ret = mi_lttng_writer_close_element(writer);
+	}
+
 end:
 	return ret;
 }
