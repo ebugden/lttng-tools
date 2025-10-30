@@ -577,7 +577,7 @@ class _Session(lttngctl.Session):
         self._client._run_cmd("clear '{session_name}'".format(session_name=self.name))
 
     def destroy(self, wait=True):
-        # type: () -> None
+        # type: (bool) -> None
         args = [
             "destroy",
             self.name,
@@ -780,7 +780,7 @@ class LTTngClient(logger._Logger, lttngctl.Controller):
     def create_session(
         self, name=None, output=None, live=False, snapshot=False, shm_path=None
     ):
-        # type: (Optional[str], Optional[lttngctl.SessionOutputLocation], bool, Optional[pathlib.Path]) -> lttngctl.Session
+        # type: (Optional[str], Optional[lttngctl.SessionOutputLocation], bool, bool, Optional[pathlib.Path]) -> lttngctl.Session
         name = name if name else lttngctl.Session._generate_name()
         args = ["create", name]
 
