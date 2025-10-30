@@ -476,7 +476,7 @@ class KernelTracepointEventRule(TracepointEventRule):
 class Channel(abc.ABC):
     """
     A channel is an object which is responsible for a set of ring buffers. It is
-    associated to a domain and
+    associated to a domain and <anything else?>
     """
 
     @staticmethod
