@@ -146,6 +146,8 @@ cmd_error_code destroy_session(const lttng_session& session)
 			raw_destruction_handle);
 	}();
 
+	const struct lttng_trace_archive_location *trace_archive_location = nullptr;
+
 	if (!opt_no_wait) {
 		enum lttng_destruction_handle_status status;
 
@@ -206,12 +208,11 @@ cmd_error_code destroy_session(const lttng_session& session)
 				break;
 			case LTTNG_ROTATION_STATE_COMPLETED:
 			{
-				const struct lttng_trace_archive_location *location;
-
 				status = lttng_destruction_handle_get_archive_location(
-					destruction_handle.get(), &location);
+					destruction_handle.get(), &trace_archive_location);
 				if (status == LTTNG_DESTRUCTION_HANDLE_STATUS_OK) {
-					ret = print_trace_archive_location(location, session.name);
+					ret = print_trace_archive_location(trace_archive_location,
+									   session.name);
 					if (ret) {
 						ERR_FMT("{}Failed to print the location of the latest trace archive of session `{}`",
 							newline_needed ? "\n" : "",
@@ -250,7 +251,8 @@ cmd_error_code destroy_session(const lttng_session& session)
 	}
 
 	if (lttng_opt_mi) {
-		ret = mi_lttng_session(writer, &session, 0);
+		ret = mi_lttng_session_with_trace_archive_location(
+			writer, &session, 0, trace_archive_location);
 		if (ret) {
 			return CMD_ERROR;
 		}
