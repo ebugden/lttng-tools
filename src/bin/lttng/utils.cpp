@@ -575,6 +575,12 @@ int show_cmd_help(const char *cmd_name, const char *help_msg)
 	return ret;
 }
 
+// Used in both destroy and rotate to print the human-readable archive location
+
+// TODO: Info to unpack: session_name, archive location (several different types)
+// Maybe archive formatter owns session name and also an archive location (base class) but then it can be several different types (my impression is that this doesn't work..)
+// Draw/sketch out the possible ownership diagram.
+// What I would love to do is get the type in the constructor and then determine the class attribute location type afterwards
 int print_trace_archive_location(const struct lttng_trace_archive_location *location,
 				 const char *session_name)
 {

@@ -1040,6 +1040,7 @@ end:
 static int mi_lttng_location(struct mi_writer *writer,
 			     const struct lttng_trace_archive_location *location);
 
+// Could I make the trace archive an optional argument and then all session listing could use the same function?
 int mi_lttng_session_with_trace_archive_location(
 	struct mi_writer *writer,
 	const struct lttng_session *session,

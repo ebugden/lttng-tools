@@ -599,9 +599,10 @@ class _Session(lttngctl.Session):
             args.append("--no-wait")
             timeout_s = None
 
-        self._client._run_cmd(
+        [out, err] = self._client._run_cmd(
             " ".join([shlex.quote(x) for x in args]), timeout_s=timeout_s
         )
+        #print(out)
 
     def rotate(self, wait=True):
         # type: (bool) -> None
@@ -773,6 +774,7 @@ class LTTngClient(logger._Logger, lttngctl.Controller):
         args = [str(self._environment.lttng_client_path)]  # type: list[str]
         if os.getenv("LTTNG_TEST_VERBOSE_CLIENT", "0") != "0":
             args.extend(["-vvv"])
+        # Check the following lines out. Looks like the default is to do MI
         if output_format == LTTngClient.CommandOutputFormat.MI_XML:
             args.extend(["--mi", "xml"])
 

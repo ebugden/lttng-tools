@@ -64,7 +64,11 @@ struct poptOption long_options[] = {
  */
 cmd_error_code destroy_session(const lttng_session& session)
 {
+	//static volatile int patate = 0;
+	//while(!patate);
+	
 	int ret;
+	// I don't understand the logic behind newline_needed.. Does it just have to do with how we want to print the messages?
 	bool newline_needed = false, printed_destroy_msg = false;
 
 	const auto print_trailing_new_line = lttng::make_scope_exit([&newline_needed]() noexcept {
@@ -195,6 +199,7 @@ cmd_error_code destroy_session(const lttng_session& session)
 		}
 
 		enum lttng_rotation_state rotation_state;
+		//bool has_archive_location = false;
 		status = lttng_destruction_handle_get_rotation_state(destruction_handle.get(),
 								     &rotation_state);
 		if (status != LTTNG_DESTRUCTION_HANDLE_STATUS_OK) {
@@ -211,6 +216,8 @@ cmd_error_code destroy_session(const lttng_session& session)
 				status = lttng_destruction_handle_get_archive_location(
 					destruction_handle.get(), &trace_archive_location);
 				if (status == LTTNG_DESTRUCTION_HANDLE_STATUS_OK) {
+					//has_archive_location = true;
+					// Requires more significant refactoring to print things in one place at the end. I can't remember why... Maybe because the human-readable version is printed as we go printing it at the end would be out of sequence? Yeah I think that's it. Leaving human-readable as-is for now
 					ret = print_trace_archive_location(trace_archive_location,
 									   session.name);
 					if (ret) {

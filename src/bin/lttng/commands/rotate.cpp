@@ -130,6 +130,7 @@ skip_wait:
 		goto error;
 	}
 
+	// Rotate: Either prints the location if human readable or calls the MI
 	if (!lttng_opt_mi && print_location) {
 		ret = print_trace_archive_location(location, session_name);
 	} else if (lttng_opt_mi) {
