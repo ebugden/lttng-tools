@@ -122,7 +122,7 @@ Some invocations of programs during the test may override this value to perform 
 | Environment variables to forward into test environment
 | {check} | {ex} | {ex}
 
-| `LTTNG_TEST_GDBSERVER_CONSUMERD_KERNEL
+| `LTTNG_TEST_GDBSERVER_CONSUMERD_KERNEL`
 | Launch `gdbserver` and attach to newly spawned `lttng-consumerd` process
 | {check} | {ex} | {ex}
 
