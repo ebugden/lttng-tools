@@ -31,7 +31,7 @@ def test_example(tap: lttngtest.TapGenerator, test_env: lttngtest._Environment) 
     channel.add_recording_rule(lttngtest.lttngctl.UserTracepointEventRule("tp:tptest"))
 
     session.start()
-    app = test_env.launch_wait_trace_test_application(1000)
+    app = test_env.launch_wait_trace_test_application(event_count=1000)
     app.trace()
     app.wait_for_tracing_done()
     app.wait_for_exit()
