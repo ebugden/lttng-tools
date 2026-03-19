@@ -78,7 +78,7 @@ def test_short_lived_ust_app(tap, test_env, buffer_sharing_policy):
 
     tap.test(
         len(viewer.messages) == 10,
-        "Live viewer got {} / 10 expected events add exited gracefully".format(
+        "Live viewer got {} / 10 expected events and exited gracefully".format(
             len(viewer.messages)
         ),
     )

@@ -307,7 +307,7 @@ class _WaitTraceTestApplication:
             )
         )
 
-        # File that the application will create when all the last event has been emitted
+        # File that the application will create before the last event has been emitted
         self._app_before_last_event_file_path = pathlib.Path(
             tempfile.mktemp(
                 prefix="app_",
@@ -458,7 +458,7 @@ class _WaitTraceTestApplication:
             )
 
             # As of python 3.9, subprocess.Popen supports a user parameter which
-            # runs `setreuid()` before executing the proces and will be preferable
+            # runs `setreuid()` before executing the process and will be preferable
             # when support for older python versions is no longer required.
             test_app_args = [
                 "runuser",
