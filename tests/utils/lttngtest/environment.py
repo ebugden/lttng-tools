@@ -80,7 +80,7 @@ class TemporaryDirectory:
         return pathlib.Path(self._directory_path)
 
 
-class _SignalWaitQueue:
+class SignalWaitQueue:
     """
     Utility class useful to wait for a signal before proceeding.
 
@@ -1368,7 +1368,7 @@ class _Environment(logger._Logger):
             sessiond_env["LTTNG_HOME"] = str(self.lttng_home_location)
 
         self.lttng_sessiond_env_vars = sessiond_env
-        wait_queue = _SignalWaitQueue()
+        wait_queue = SignalWaitQueue()
         with wait_queue.intercept_signal(signal.SIGUSR1):
             self._log(
                 "Launching session daemon with LTTNG_HOME=`{home_dir}`".format(
