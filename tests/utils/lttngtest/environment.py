@@ -291,7 +291,8 @@ class _WaitTraceTestApplication:
         self._process = None
         self._environment = environment  # type: Environment
         self._iteration_count = event_count
-        # File that the application will wait to see before tracing its events.
+
+        # File that the application will wait to see before emitting its events.
         dir = (
             self._compat_pathlike(environment.lttng_home_location)
             if environment.lttng_home_location
@@ -567,30 +568,34 @@ class _WaitTraceTestApplication:
 
     def trace(self):
         # type: () -> None
+        """
+        Call this function to tell the test application to begin emitting
+        events.
+        """
         if self._process.poll() is not None:
             # Application has unexpectedly returned.
             raise RuntimeError(
-                "Test application has unexpectedly returned before tracing with return code `{return_code}`".format(
+                "Test application has unexpectedly returned with return code `{return_code}` before emitting events".format(
                     return_code=self._process.returncode
                 )
             )
         open(self._compat_pathlike(self._app_start_tracing_file_path), mode="x")
-        self._environment._log("[{}] Tracing started".format(self.vpid))
+        self._environment._log("[{}] Emitting events started".format(self.vpid))
         self._tracing_started = True
 
     def wait_for_before_last_event(self):
         # type: () -> None
         if not self._tracing_started:
-            raise RuntimeError("Tracing hasn't been started")
+            raise RuntimeError("Emitting events hasn't been started")
         self._wait_for_file_to_be_created(self._app_before_last_event_file_path)
         self._environment._log("[{}] Before last event done".format(self.vpid))
 
     def wait_for_tracing_done(self):
         # type: () -> None
         if not self._tracing_started:
-            raise RuntimeError("Tracing hasn't been started")
+            raise RuntimeError("Emitting events hasn't been started")
         self._wait_for_file_to_be_created(self._app_tracing_done_file_path)
-        self._environment._log("[{}] Tracing done".format(self.vpid))
+        self._environment._log("[{}] Emitting events done".format(self.vpid))
 
     def wait_for_exit(self):
         # type: () -> None
