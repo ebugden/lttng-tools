@@ -301,6 +301,7 @@ class _WaitTraceTestApplication:
         event_count,  # type: int
         environment,  # type: Environment
         wait_time_between_events_us=0,  # type: int
+        emit_end_event=False,  # type: bool
         wait_before_exit=False,  # type: bool
         wait_before_exit_file_path=None,  # type: Optional[pathlib.Path]
         run_as=None,  # type: Optional[str]
@@ -413,6 +414,9 @@ class _WaitTraceTestApplication:
                     str(self._wait_before_last_event_file_path),
                 ]
             )
+
+        if emit_end_event:
+            test_app_args.extend(["--emit-end-event"])
 
         if wait_before_exit:
             test_app_args.extend(
@@ -1995,6 +1999,7 @@ class _Environment(logger._Logger):
         self,
         event_count: int,
         wait_time_between_events_us: int = 0,
+        emit_end_event=False,
         wait_before_exit: bool = False,
         wait_before_exit_file_path: Optional[pathlib.Path] = None,
         run_as: Optional[str] = None,
@@ -2023,6 +2028,7 @@ class _Environment(logger._Logger):
             event_count,
             self,
             wait_time_between_events_us,
+            emit_end_event,
             wait_before_exit,
             wait_before_exit_file_path,
             run_as,
