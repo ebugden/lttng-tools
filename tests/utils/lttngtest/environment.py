@@ -104,11 +104,22 @@ class SignalWaitQueue:
     ):
         self._queue.put_nowait(signal_number)
 
-    def wait_for_signal(self):
+    def wait_for_signal(self, break_callback=None):
+        """
+        Block waiting for the specified signal.
+
+        The `break_callback` must be a function that returns a boolean. Use
+        this to specify a condition where waiting should stop. For example, a
+        function that polls the process expected to produce the signal—if the
+        process has exited there is no sense in waiting indefinitely.
+        """
         # This uses a timeout + retry loop to avoid
         # issues with hanging on yocto kirkstone powerpc
         wait = True
         while wait:
+            if break_callback and break_callback():
+                raise Exception("wait_for_signal: Stop waiting for signal")
+
             try:
                 self._queue.get(block=True, timeout=1)
                 wait = False
