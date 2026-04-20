@@ -60,4 +60,7 @@ if __name__ == "__main__":
         ) as test_env:
             test(tap, test_env)
 
+        # Empty line for readability
+        print()
+
     sys.exit(0 if tap.is_successful else 1)
