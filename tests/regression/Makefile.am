@@ -96,6 +96,7 @@ TESTS = tools/clear/test_disallow.py \
 	tools/client/test_event_rule_listing.py \
 	tools/client/test_warn_on_shm_too_small.py \
 	tools/channel/test_channel_allocation_policy_per_cpu.py \
+	tools/listen/test_listen.py \
 	tools/sparse-buffer/test_sparse_buffer.py \
 	tools/trace-format/test_empty_event_field_name.py \
 	tools/trace-format/test_sessiond_default_trace_format.py \

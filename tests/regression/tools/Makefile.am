@@ -186,6 +186,7 @@ noinst_SCRIPTS += \
 	health/test_thread_stall \
 	health/test_tp_fail \
 	listen/test_listen_cli \
+	listen/test_listen.py \
 	live/test_early_inactive_app.py \
 	live/test_high_latency.py \
 	live/test_kernel \
