@@ -117,6 +117,7 @@ TESTS = tools/map/test_buffer_ownership_models.py \
 	tools/notification/test_notification_ust_buffer_usage.py \
 	tools/notification/test_notification_ust_multi_app.py \
 	tools/notification/test_notification_ust_notifier_discarded_count.py \
+	tools/listen/test_listen.py \
 	tools/sparse-buffer/test_sparse_buffer.py \
 	tools/trace-format/test_empty_event_field_name.py \
 	tools/trace-format/test_sessiond_default_trace_format.py \

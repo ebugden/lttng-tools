@@ -10,6 +10,7 @@ from . import lttngctl, logger, environment
 import enum
 import os
 import shlex
+import signal
 import sqlite3
 import subprocess
 import tempfile
@@ -2510,3 +2511,55 @@ class LTTngClient(logger._Logger, lttngctl.Controller):
             )
 
         raise Unsupported("Rate policy type `{}` is not supported".format(policy_name))
+
+
+    def launch_trigger_notification_listener(self, output_as_mi=True, triggers=[]):
+        # Check that nothing else is using the same signal emitted by
+        # the listener.
+        def signal_is_unused(signal_to_test):
+            return (signal.getsignal(signal_to_test) == signal.SIG_DFL) or (
+                signal.getsignal(signal_to_test) == signal.SIG_IGN
+            )
+        assert signal_is_unused(signal.SIGUSR2)
+
+        # Launch lttng-listen
+        #
+        # The lttng-listen command is run directly because `run_cmd()`
+        # assumes each command will exit. lttng-listen runs
+        # indefinitely.
+        # TODO: Why do I have the type comment bellow?
+
+        # Wait for the listener to either signal readiness or exit
+        wait_queue = environment.SignalWaitQueue()
+        with wait_queue.intercept_signal(signal.SIGUSR2):
+            listener_command = [
+                str(self._environment.lttng_client_path)
+            ]  # type: list[str]
+
+            if output_as_mi:
+                listener_command.append("--mi=json-lines")
+
+            listener_command.extend(["listen", "--signal-when-ready"])
+
+            for trigger in triggers:
+                listener_command.append(trigger)
+
+            client_env = os.environ.copy()  # type: dict[str, str]
+            if self._environment.lttng_home_location is not None:
+                client_env["LTTNG_HOME"] = str(self._environment.lttng_home_location)
+            if self._environment.lttng_rundir is not None:
+                client_env["LTTNG_RUNDIR"] = str(self._environment.lttng_rundir)
+
+            listener = subprocess.Popen(
+                listener_command,
+                bufsize=0,  # Current workaround for Python buffering when reading from process
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=client_env,
+            )
+
+            def is_listener_dead():
+                return listener.poll()
+            wait_queue.wait_for_signal(break_callback=is_listener_dead)
+
+        return listener
