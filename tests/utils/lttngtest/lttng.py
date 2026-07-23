@@ -1382,4 +1382,7 @@ class LTTngClient(logger._Logger, lttngctl.Controller):
                 return listener.poll()
             wait_queue.wait_for_signal(break_callback=is_listener_dead)
 
+        # TODO: Unregister the signal (maybe not here). Maybe that's what the "with" section does?
+
+        # TODO: return listener or an exception if it didn't boot correctly?
         return listener

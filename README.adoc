@@ -76,7 +76,7 @@ The following dependencies are optional:
   viewer of the https://lttng.org/man/1/lttng-view/[`lttng view`]
   command, `make{nbsp}check` and tests.
 +
-Debian/Ubuntu package: `babeltrace2 libbabeltrace2-dev`
+Debian/Ubuntu package: `babeltrace2 libbabeltrace2-dev python3-bt2`
 
 * **https://lttng.org/[LTTng{nbh}UST]** (same minor version as {lt}):
   LTTng user space tracing (applications and libraries).

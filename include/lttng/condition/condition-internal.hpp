@@ -67,6 +67,7 @@ int lttng_condition_serialize(const struct lttng_condition *condition,
 
 bool lttng_condition_is_equal(const struct lttng_condition *a, const struct lttng_condition *b);
 
+// What is this serialization code and is it helpful for me for the listen MI?
 enum lttng_error_code
 lttng_condition_mi_serialize(const struct lttng_trigger *trigger,
 			     const struct lttng_condition *condition,

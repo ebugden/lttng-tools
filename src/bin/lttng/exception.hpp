@@ -20,6 +20,8 @@
 	throw lttng::cli::invalid_usage_error(msg, LTTNG_SOURCE_LOCATION())
 #define LTTNG_THROW_CLI_SHOW_HELP_FAIL(command_name) \
 	throw lttng::cli::show_help_failure(command_name, LTTNG_SOURCE_LOCATION())
+// Could the following exceptions be in the common exceptions?
+// Include source location in the following exceptions? Does the location make sense here?
 #define LTTNG_THROW_CLI_UNEXPECTED_TYPE(object_name, type) \
 	throw lttng::cli::unexpected_type(object_name, type, LTTNG_SOURCE_LOCATION())
 #define LTTNG_THROW_CLI_TRIGGER_NOTIFICATION_SUBSCRIPTION_ERROR(trigger_name)   \
@@ -45,18 +47,25 @@ public:
 				   const lttng::source_location& source_location);
 };
 
+// TODO: Add a `listen` namespace? Or a trigger notification namespace?
+
 class unexpected_type : public runtime_error {
 public:
+	// TODO: Clarify why I mean by "object_name" (i.e. notification, event expression). "object_type_name"? Just make two different exceptions?
 	explicit unexpected_type(const char *object_name,
 				 int type,
 				 const lttng::source_location& source_location);
 };
 
+// TODO: This has more to do with trigger notification.
+// TODO: Are there other places this new exception should be used?
 class trigger_notification_subscription_error : public runtime_error {
 public:
 	explicit trigger_notification_subscription_error(
 		const char *trigger_name, const lttng::source_location& source_location);
 };
+
+// TODO: Should the following line have a `;`?
 } /* namespace cli */
 }; /* namespace lttng */
 

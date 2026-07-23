@@ -22,11 +22,14 @@ test_utils_import_path = pathlib.Path(__file__).absolute().parents[3] / "utils"
 sys.path.insert(0, str(test_utils_import_path))
 
 import lttngtest
+# Should this be included in lttngtest? Because the code there uses it?
+import bt2  # Debug
 
 # Timeout is set to 5 minutes to avoid timing out simply because the machine
 # is very slow.
 #
 # When debugging, set the timeout to something short, e.g. 4 seconds.
+# TODO: Put this variable somewhere more general?
 TIMEOUT_DURATION_SECONDS = 5 * 60
 
 
@@ -120,6 +123,7 @@ def test_listen_all_triggers(tap, test_env):
         Event (trigger trigger1)
         Event (trigger trigger2)""").strip()
 
+    # TODO: Use wait_for_n_lines() instead?
     # Wait for the trigger notifications to be received
     tap.diagnostic("Wait for the output to be received")
     actual_output = []
@@ -244,6 +248,7 @@ def test_listen_two_triggers_with_event_field_captures(tap, test_env):
         ]
         Event (trigger trigger2)""").strip()
 
+    # TODO: Use wait_for_n_lines() instead?
     # Wait for the trigger notifications to be received
     tap.diagnostic("Wait for the output to be received")
     actual_output = []
@@ -410,6 +415,8 @@ def test_listen_trigger_consumed_data_size_becomes_greater_than(tap, test_env):
     # Check that the number of bytes consumed is greater than the set
     # threshold.
     bytes_consumed = int(trigger_message[trigger_message.index("bytes") - 1])
+    # TODO: At the moment I specify just one test per function. Would need to change that if I want to have more than one test
+    # tap.test(bytes_consumed > threshold_bytes, "Number of bytes consumed is greater than the set threshold")
     if not (bytes_consumed > threshold_bytes):
         tap.diagnostic(
             "Number of bytes consumed should be greater than the set threshold"
@@ -420,6 +427,7 @@ def test_listen_trigger_consumed_data_size_becomes_greater_than(tap, test_env):
     # Since we cannot predict the exact number of bytes consumed, remove
     # the number of bytes from the actual output when comparing the
     # message.
+    # TODO: Handle exception if the output is not the expected stuff?
     byte_number_placeholder = "XXX"
     trigger_message[(trigger_message.index("bytes") - 1)] = byte_number_placeholder
     actual_output[1] = " ".join(trigger_message)
@@ -494,6 +502,7 @@ def test_listen_two_triggers_same_event_rule(tap, test_env):
         Event (trigger trigger1)
         Event (trigger trigger2)""").strip()
 
+    # TODO: Use wait_for_n_lines() instead?
     # Wait for the trigger notifications to be received
     tap.diagnostic("Wait for the output to be received")
     actual_output = []
@@ -603,6 +612,7 @@ def test_listen_without_notify_action(tap, test_env):
         Listening for notifications from all existing triggers.
         Event (trigger trigger2)""").strip()
 
+    # TODO: Use wait_for_n_lines() instead?
     # Wait for the trigger notifications to be received
     tap.diagnostic("Wait for the output to be received")
     actual_output = []
@@ -715,6 +725,14 @@ if __name__ == "__main__":
         test_listen_trigger_does_not_exist,
     ]
     tap = lttngtest.TapGenerator(len(tests))
+
+    # Necessary?
+    # Check for platform requirements, if necessary
+    # has_platform_requirements = True
+    # if not has_platform_requirements:
+    # This function will exit either with skipping or with a bailout,
+    # depending on the the environment configuration.
+    #    tap.missing_platform_requirements("Need XXX")
 
     for test in tests:
         with lttngtest.test_environment(

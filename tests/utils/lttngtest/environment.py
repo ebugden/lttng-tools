@@ -137,6 +137,7 @@ class SignalWaitQueue:
             yield
         except:
             # Restore the original signal handler and forward the exception.
+            # How do we know the other signal won't fire while the test is running and make the test fail?
             raise
         finally:
             signal.signal(signal_number, original_handler)
@@ -305,6 +306,8 @@ class _WaitTraceTestApplication:
         self._iteration_count = event_count
 
         # File that the application will wait to see before emitting its events.
+        # TODO: Remove "tracing" in file name. Change to "emitting".
+        # The suffix should be changed too no?
         dir = (
             self._compat_pathlike(environment.lttng_home_location)
             if environment.lttng_home_location
@@ -330,6 +333,7 @@ class _WaitTraceTestApplication:
         )
 
         # File that the application will create when all events have been emitted.
+        # TODO: Remove "tracing"
         self._app_tracing_done_file_path = pathlib.Path(
             tempfile.mktemp(
                 prefix="app_",
@@ -581,6 +585,7 @@ class _WaitTraceTestApplication:
     def start_tracing_path(self):
         return self._compat_pathlike(self._app_start_tracing_file_path)
 
+    # TODO: Rename. Remove "trace"
     def trace(self):
         # type: () -> None
         """
@@ -605,6 +610,7 @@ class _WaitTraceTestApplication:
         self._wait_for_file_to_be_created(self._app_before_last_event_file_path)
         self._environment._log("[{}] Before last event done".format(self.vpid))
 
+    # TODO: Rename. Remove "tracing"
     def wait_for_tracing_done(self):
         # type: () -> None
         if not self._tracing_started:
