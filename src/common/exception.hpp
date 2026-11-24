@@ -30,10 +30,12 @@
 
 #define LTTNG_SOURCE_LOCATION() lttng::source_location(__FILE__, __func__, __LINE__)
 
+// LTTNG_THROW_CTL Good default error? It's for liblttngctl
 #define LTTNG_THROW_CTL(msg, error_code) \
 	throw lttng::ctl::error(msg, error_code, LTTNG_SOURCE_LOCATION())
 #define LTTNG_THROW_POSIX(msg, errno_code) \
 	throw lttng::posix_error(msg, errno_code, LTTNG_SOURCE_LOCATION())
+// This next one seems very generic
 #define LTTNG_THROW_ERROR(msg)	      throw lttng::runtime_error(msg, LTTNG_SOURCE_LOCATION())
 #define LTTNG_THROW_OUT_OF_RANGE(msg) throw lttng::out_of_range(msg, LTTNG_SOURCE_LOCATION())
 #define LTTNG_THROW_ALLOCATION_FAILURE_ERROR(msg) \
@@ -42,9 +44,11 @@
 	throw lttng::allocation_failure(msg, allocation_size, LTTNG_SOURCE_LOCATION())
 #define LTTNG_THROW_UNSUPPORTED_ERROR(msg) \
 	throw lttng::unsupported_error(msg, LTTNG_SOURCE_LOCATION())
+// Use Communication error?
 #define LTTNG_THROW_COMMUNICATION_ERROR(msg) \
 	throw lttng::communication_error(msg, LTTNG_SOURCE_LOCATION())
 #define LTTNG_THROW_PROTOCOL_ERROR(msg) throw lttng::protocol_error(msg, LTTNG_SOURCE_LOCATION())
+// Use invalid argument error?
 #define LTTNG_THROW_INVALID_ARGUMENT_ERROR(msg) \
 	throw lttng::invalid_argument_error(msg, LTTNG_SOURCE_LOCATION())
 

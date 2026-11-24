@@ -23,11 +23,15 @@ test_utils_import_path = pathlib.Path(__file__).absolute().parents[3] / "utils"
 sys.path.insert(0, str(test_utils_import_path))
 
 import lttngtest
+# Should this be included in lttngtest? Because the code there uses it?
+import bt2  # Debug
 
 # Timeout is set to 5 minutes to avoid timing out simply because the machine
 # is very slow.
 #
 # When debugging, set the timeout to something short, e.g. 4 seconds.
+# TODO: Put this variable somewhere more general?
+TIMEOUT_DURATION_SECONDS = 4 #5 * 60
 
 NUMBER_PLACEHOLDER_STR = "XXX"
 
@@ -49,7 +53,9 @@ def wait_for_n_lines(file_object, n_lines, timeout):
                 f"listener output. Current output:\n{lines}"
             )
 
+        # I don't know why this approach doesn't cause problems too. In my mind there could be more than one line ready at once.
         lines.append(file_object.readline().decode("utf-8").rstrip())
+        # TODO: Pass tap as parameter too so that I can print as diagnostic?
         print(f"Output line {len(lines)}: {lines[-1]}")
 
     return lines
@@ -1907,6 +1913,8 @@ def test_listen_trigger_does_not_exist(tap, test_env):
     tap.test(False, test_description)
 
 
+# TODO: Make tests for the different types of intrumentation that exist? e..g kernel syscall, log4j, python
+
 if __name__ == "__main__":
     tests = [
         test_listen_all_triggers,
@@ -1927,6 +1935,14 @@ if __name__ == "__main__":
     # The 6 greater/less than tests each have one additional tap test
     additional_tests = 6
     tap = lttngtest.TapGenerator(total_test_count=(len(tests) + additional_tests))
+
+    # Necessary?
+    # Check for platform requirements, if necessary
+    # has_platform_requirements = True
+    # if not has_platform_requirements:
+    # This function will exit either with skipping or with a bailout,
+    # depending on the the environment configuration.
+    #    tap.missing_platform_requirements("Need XXX")
 
     for test in tests:
         with lttngtest.test_environment(

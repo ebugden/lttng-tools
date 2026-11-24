@@ -14,6 +14,9 @@
 
 #include <memory>
 
+// TODO: Implement the C++ shim instead of these wrappers.
+
+// What is this next bit?
 #ifndef CTL_UTILS_INCLUDED
 #error "Include <ctl-util/utils.hpp> instead of including this file directly."
 #endif
@@ -25,6 +28,7 @@ namespace ctl {
  * The 'triggers' alias, based on `unique_ptr`, manages `lttng_triggers`
  * resources with automatic memory cleanup.
  */
+// How do we know whether there will be collision with other symbols in this namespace?
 using triggers = std::unique_ptr<
 	lttng_triggers,
 	lttng::memory::create_deleter_class<lttng_triggers, lttng_triggers_destroy>::deleter>;
