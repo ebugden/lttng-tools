@@ -47,7 +47,7 @@ if __name__ == "__main__":
     tests = [
         test_example,
     ]
-    tap = lttngtest.TapGenerator(len(tests))
+    tap = lttngtest.TapGenerator(total_test_count=len(tests))
 
     # Check for platform requirements, if necessary
     has_platform_requirements = True
